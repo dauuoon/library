@@ -54,6 +54,7 @@ function App() {
   const [showCategories, setShowCategories] = useState(false)
   const [theme, setTheme] = useState<'light' | 'dark'>('dark')
   const [toastMessage, setToastMessage] = useState<string | null>(null)
+  const [showQuiz, setShowQuiz] = useState(false)
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
@@ -164,9 +165,18 @@ function App() {
         >
           {theme === 'light' ? '🌑' : '☀︎'}
         </button>
+        <button
+          className="fab primary"
+          aria-label="퀴즈 게임"
+          onClick={() => setShowQuiz(true)}
+        >
+          ❓
+        </button>
       </div>
       
       {toastMessage && <div className="toast">{toastMessage}</div>}
+      
+      {showQuiz && <QuizModal entries={entries} onClose={() => setShowQuiz(false)} />}
     </div>
   )
 }
@@ -199,9 +209,9 @@ function EntryList({
   
   return (
     <div className="entry-list">
-      {sortedConsonants.map((consonant, idx) => (
+      {sortedConsonants.map((consonant) => (
         <div key={consonant}>
-          {idx > 0 && <div className="consonant-divider">{consonant}</div>}
+          <div className="consonant-divider">{consonant}</div>
           {grouped[consonant].map((entry) => (
             <EntryRow
               key={entry.id}
@@ -362,4 +372,128 @@ function SearchBar({
   )
 }
 
-export default App
+function QuizModal({ entries, onClose }: { entries: Entry[]; onClose: () => void }) {
+  const [mode, setMode] = useState<'pick-word' | 'pick-meaning' | null>(null)
+  const [quizData, setQuizData] = useState<Entry[]>([])
+  const [currentIdx, setCurrentIdx] = useState(0)
+  const [score, setScore] = useState(0)
+  const [userAnswer, setUserAnswer] = useState('')
+  const [answered, setAnswered] = useState(false)
+  const [isCorrect, setIsCorrect] = useState(false)
+
+  const startQuiz = (selectedMode: 'pick-word' | 'pick-meaning') => {
+    const shuffled = [...entries].sort(() => Math.random() - 0.5).slice(0, 5)
+    setQuizData(shuffled)
+    setMode(selectedMode)
+    setCurrentIdx(0)
+    setScore(0)
+  }
+
+  const checkAnswer = () => {
+    const current = quizData[currentIdx]
+    if (!current) return
+
+    let correct = false
+    if (mode === 'pick-word') {
+      correct = userAnswer.trim() === current.title
+    } else if (mode === 'pick-meaning') {
+      correct = userAnswer.trim() === current.summary
+    }
+
+    setIsCorrect(correct)
+    setAnswered(true)
+    if (correct) setScore((prev) => prev + 1)
+  }
+
+  const nextQuestion = () => {
+    if (currentIdx < quizData.length - 1) {
+      setCurrentIdx((prev) => prev + 1)
+      setUserAnswer('')
+      setAnswered(false)
+      setIsCorrect(false)
+    }
+  }
+
+  if (!mode) {
+    return (
+      <div className="quiz-overlay">
+        <div className="quiz-modal">
+          <button className="quiz-close" onClick={onClose}>✕</button>
+          <h2>퀴즈 게임을 선택하세요</h2>
+          <div className="quiz-buttons">
+            <button className="quiz-btn" onClick={() => startQuiz('pick-word')}>
+              설명을 읽고 단어 맞추기
+            </button>
+            <button className="quiz-btn" onClick={() => startQuiz('pick-meaning')}>
+              단어를 읽고 설명 맞추기
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (quizData.length === 0) return null
+
+  const current = quizData[currentIdx]
+  const isFinished = currentIdx === quizData.length - 1 && answered
+
+  return (
+    <div className="quiz-overlay">
+      <div className="quiz-modal">
+        <button className="quiz-close" onClick={onClose}>✕</button>
+        {isFinished ? (
+          <div className="quiz-result">
+            <h2>퀴즈 완료!</h2>
+            <p className="score">
+              {score} / {quizData.length} 맞췄습니다!
+            </p>
+            <button className="quiz-btn" onClick={() => onClose()}>
+              완료
+            </button>
+          </div>
+        ) : (
+          <div className="quiz-question">
+            <p className="progress">
+              {currentIdx + 1} / {quizData.length}
+            </p>
+            <h3>
+              {mode === 'pick-word'
+                ? current.summary
+                : current.title}
+            </h3>
+            <input
+              type="text"
+              value={userAnswer}
+              onChange={(e) => setUserAnswer(e.target.value)}
+              placeholder="답을 입력하세요"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  if (!answered) checkAnswer()
+                  else nextQuestion()
+                }
+              }}
+              disabled={answered}
+            />
+            {answered && (
+              <div className={`answer-feedback ${isCorrect ? 'correct' : 'incorrect'}`}>
+                {isCorrect ? (
+                  <p>✓ 맞습니다!</p>
+                ) : (
+                  <p>✗ 틀렸습니다. 정답은 "{mode === 'pick-word' ? current.title : current.summary}"입니다.</p>
+                )}
+              </div>
+            )}
+            <button
+              className="quiz-btn"
+              onClick={answered ? nextQuestion : checkAnswer}
+            >
+              {answered ? '다음' : '제출'}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
