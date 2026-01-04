@@ -31,7 +31,23 @@ function App() {
     const normalized = fileEntries.map(normalizeEntry)
     return normalized.length ? normalized : seedEntries
   })
-  const [categories] = useState<Category[]>(seedCategories)
+  
+  const [categories] = useState<Category[]>(() => {
+    const fileEntries = (notionData as NotionData).entries ?? []
+    const notionCategoryNames = new Set<string>()
+    fileEntries.forEach((entry) => {
+      entry.categories?.forEach((cat) => {
+        if (typeof cat === 'string') notionCategoryNames.add(cat)
+      })
+    })
+    
+    const newCategories = Array.from(notionCategoryNames).map((name) => ({
+      id: slugify(name),
+      name,
+    }))
+    
+    return [...seedCategories, ...newCategories]
+  })
   const [query, setQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
@@ -44,9 +60,17 @@ function App() {
 
   const filtered = useMemo(() => {
     const base = query.trim() ? searchEntries(entries, query) : entries
-    return selectedCategory
+    const result = selectedCategory
       ? base.filter((entry) => entry.categories.includes(selectedCategory))
       : base
+    return result.sort((a, b) => {
+      const consonantA = getInitialConsonant(a.title)
+      const consonantB = getInitialConsonant(b.title)
+      if (consonantA === consonantB) {
+        return a.title.localeCompare(b.title, 'ko')
+      }
+      return CONSONANTS.indexOf(consonantA) - CONSONANTS.indexOf(consonantB)
+    })
   }, [entries, query, selectedCategory])
 
   const toggleExpand = (id: string) => {
@@ -93,6 +117,21 @@ function App() {
             ))}
           </div>
         )}
+
+        <div className="consonants-row">
+          {CONSONANTS.map((consonant) => (
+            <button
+              key={consonant}
+              className="consonant-btn"
+              onClick={() => {
+                const element = document.querySelector(`[data-consonant="${consonant}"]`)
+                element?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+              }}
+            >
+              {consonant}
+            </button>
+          ))}
+        </div>
       </section>
 
       <section className="panel list-panel">
@@ -165,7 +204,7 @@ function EntryRow({
   onToggle: (id: string) => void
 }) {
   return (
-    <div className={expanded ? 'entry-row open' : 'entry-row'}>
+    <div className={expanded ? 'entry-row open' : 'entry-row'} data-consonant={getInitialConsonant(entry.title)}>
       <button className="accordion" onClick={() => onToggle(entry.id)}>
         <div className="accordion-title">
           <div>
@@ -197,6 +236,17 @@ function EntryRow({
               )
             })}
           </div>
+          <button
+            className="copy-btn"
+            type="button"
+            onClick={() => {
+              const text = `${entry.title}\n${entry.summary}\n${entry.content}`
+              navigator.clipboard.writeText(text)
+            }}
+            title="복사"
+          >
+            <span className="material-symbols-outlined">content_copy</span>
+          </button>
         </div>
         <p className="content-text">{entry.content}</p>
         {entry.imageUrl && (
@@ -239,6 +289,22 @@ function slugify(value: string) {
       .replace(/(^-|-$)+/g, '')
       .slice(0, 48) || 'entry'
   )
+}
+
+const CONSONANTS = ['ㄱ', 'ㄴ', 'ㄷ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅅ', 'ㅇ', 'ㅈ', 'ㅉ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ']
+
+function getInitialConsonant(text: string): string {
+  if (!text) return 'ㅇ'
+  const char = text[0]
+  const code = char.charCodeAt(0)
+  
+  if (code >= 0xac00 && code <= 0xd7a3) {
+    const offset = (code - 0xac00) / 28 / 21
+    const consonantIndex = Math.floor(offset)
+    const consonants = ['ㄱ', 'ㄲ', 'ㄴ', 'ㄷ', 'ㄸ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅃ', 'ㅄ', 'ㅅ', 'ㅆ', 'ㅇ', 'ㅈ', 'ㅉ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ']
+    return consonants[consonantIndex] || 'ㅇ'
+  }
+  return 'ㅇ'
 }
 
 function SearchBar({
