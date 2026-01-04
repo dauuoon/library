@@ -48,9 +48,8 @@ function App() {
   const [query, setQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
-  const [showForm, setShowForm] = useState(false)
   const [showCategories, setShowCategories] = useState(false)
-  const [theme, setTheme] = useState<'light' | 'dark'>('light')
+  const [theme, setTheme] = useState<'light' | 'dark'>('dark')
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
@@ -67,31 +66,6 @@ function App() {
     setExpandedId((prev) => (prev === id ? null : id))
   }
 
-  const upsertEntry = (payload: EntryFormPayload) => {
-    const now = new Date().toISOString()
-    const slug = payload.id ?? slugify(payload.title)
-    const exists = entries.find((item) => item.id === slug)
-    if (exists) {
-      setEntries((prev) =>
-        prev.map((item) =>
-          item.id === slug
-            ? { ...item, ...payload, id: slug, updatedAt: now }
-            : item,
-        ),
-      )
-    } else {
-      const entry: Entry = {
-        ...payload,
-        id: slug,
-        createdAt: now,
-        updatedAt: now,
-      }
-      setEntries((prev) => [entry, ...prev])
-    }
-    setShowForm(false)
-    setExpandedId(slug)
-    setQuery(payload.title)
-  }
 
   return (
     <div className="shell">
@@ -134,8 +108,6 @@ function App() {
         )}
       </section>
 
-      {showForm && <EntryForm categories={categories} onSave={upsertEntry} />}
-
       <section className="panel list-panel">
         <EntryList
           entries={filtered}
@@ -156,13 +128,6 @@ function App() {
           onClick={() => setTheme((prev) => (prev === 'light' ? 'dark' : 'light'))}
         >
           {theme === 'light' ? '🌑' : '☀︎'}
-        </button>
-        <button
-          className="fab primary"
-          aria-label="단어 추가"
-          onClick={() => setShowForm((v) => !v)}
-        >
-          {showForm ? '×' : '+'}
         </button>
       </div>
     </div>
