@@ -1,33 +1,6 @@
 import type { Category, Entry } from './types'
 
-export const seedCategories: Category[] = [
-  {
-    id: 'concepts',
-    name: '개념',
-    description: '핵심 개념 모음',
-  },
-  {
-    id: 'ai',
-    name: 'AI/ML',
-    description: 'AI 관련 용어',
-  },
-  {
-    id: 'design',
-    name: '디자인',
-    description: 'UX/UI 패턴',
-  },
-  {
-    id: 'productivity',
-    name: '생산성',
-    description: '습관과 워크플로우',
-  },
-  {
-    id: 'web',
-    name: '웹',
-    description: '웹 기술 스택',
-  },
-]
-
+export const seedCategories: Category[] = []
 export const seedEntries: Entry[] = [
   {
     id: 'embedding',

@@ -42,7 +42,7 @@ function App() {
     })
     
     const newCategories = Array.from(notionCategoryNames).map((name) => ({
-      id: slugify(name),
+      id: name,
       name,
     }))
     
