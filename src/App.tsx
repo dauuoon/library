@@ -53,10 +53,18 @@ function App() {
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [showCategories, setShowCategories] = useState(false)
   const [theme, setTheme] = useState<'light' | 'dark'>('dark')
+  const [toastMessage, setToastMessage] = useState<string | null>(null)
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
   }, [theme])
+
+  useEffect(() => {
+    if (toastMessage) {
+      const timer = setTimeout(() => setToastMessage(null), 2000)
+      return () => clearTimeout(timer)
+    }
+  }, [toastMessage])
 
   const filtered = useMemo(() => {
     const base = query.trim() ? searchEntries(entries, query) : entries
@@ -144,6 +152,7 @@ function App() {
             setShowCategories(true)
           }}
           onToggle={toggleExpand}
+          onCopy={() => setToastMessage('복사되었습니다!')}
         />
       </section>
 
@@ -156,6 +165,8 @@ function App() {
           {theme === 'light' ? '🌑' : '☀︎'}
         </button>
       </div>
+      
+      {toastMessage && <div className="toast">{toastMessage}</div>}
     </div>
   )
 }
@@ -166,25 +177,43 @@ function EntryList({
   expandedId,
   onSelectCategory,
   onToggle,
+  onCopy,
 }: {
   entries: Entry[]
   categories: Category[]
   expandedId: string | null
   onSelectCategory: (id: string) => void
   onToggle: (id: string) => void
+  onCopy: () => void
 }) {
   if (!entries.length) return <p className="hint">결과가 없습니다. 단어를 추가해보세요.</p>
+  
+  const grouped: { [key: string]: Entry[] } = {}
+  entries.forEach((entry) => {
+    const consonant = getInitialConsonant(entry.title)
+    if (!grouped[consonant]) grouped[consonant] = []
+    grouped[consonant].push(entry)
+  })
+  
+  const sortedConsonants = CONSONANTS.filter((c) => grouped[c])
+  
   return (
     <div className="entry-list">
-      {entries.map((entry) => (
-        <EntryRow
-          key={entry.id}
-          entry={entry}
-          categories={categories}
-          expanded={expandedId === entry.id}
-          onSelectCategory={onSelectCategory}
-          onToggle={onToggle}
-        />
+      {sortedConsonants.map((consonant, idx) => (
+        <div key={consonant}>
+          {idx > 0 && <div className="consonant-divider">{consonant}</div>}
+          {grouped[consonant].map((entry) => (
+            <EntryRow
+              key={entry.id}
+              entry={entry}
+              categories={categories}
+              expanded={expandedId === entry.id}
+              onSelectCategory={onSelectCategory}
+              onToggle={onToggle}
+              onCopy={onCopy}
+            />
+          ))}
+        </div>
       ))}
     </div>
   )
@@ -196,19 +225,36 @@ function EntryRow({
   expanded,
   onSelectCategory,
   onToggle,
+  onCopy,
 }: {
   entry: Entry
   categories: Category[]
   expanded: boolean
   onSelectCategory: (id: string) => void
   onToggle: (id: string) => void
+  onCopy: () => void
 }) {
   return (
     <div className={expanded ? 'entry-row open' : 'entry-row'} data-consonant={getInitialConsonant(entry.title)}>
       <button className="accordion" onClick={() => onToggle(entry.id)}>
         <div className="accordion-title">
           <div>
-            <h3>{entry.title}</h3>
+            <div className="title-row">
+              <h3>{entry.title}</h3>
+              <button
+                className="copy-icon-btn"
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  const text = `${entry.title}\n${entry.summary}\n${entry.content}`
+                  navigator.clipboard.writeText(text)
+                  onCopy()
+                }}
+                title="복사"
+              >
+                <span className="material-symbols-outlined">content_copy</span>
+              </button>
+            </div>
             <p className="summary" title={entry.summary}>
               {entry.summary}
             </p>
@@ -236,17 +282,6 @@ function EntryRow({
               )
             })}
           </div>
-          <button
-            className="copy-btn"
-            type="button"
-            onClick={() => {
-              const text = `${entry.title}\n${entry.summary}\n${entry.content}`
-              navigator.clipboard.writeText(text)
-            }}
-            title="복사"
-          >
-            <span className="material-symbols-outlined">content_copy</span>
-          </button>
         </div>
         <p className="content-text">{entry.content}</p>
         {entry.imageUrl && (
