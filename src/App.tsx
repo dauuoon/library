@@ -163,14 +163,14 @@ function App() {
           aria-label="테마 전환"
           onClick={() => setTheme((prev) => (prev === 'light' ? 'dark' : 'light'))}
         >
-          {theme === 'light' ? '🌑' : '☀︎'}
+          <span className="material-symbols-outlined">{theme === 'light' ? 'light_mode' : 'dark_mode'}</span>
         </button>
         <button
           className="fab primary"
           aria-label="퀴즈 게임"
           onClick={() => setShowQuiz(true)}
         >
-          ❓
+          <span className="material-symbols-outlined">playing_cards</span>
         </button>
       </div>
       
@@ -380,6 +380,8 @@ function QuizModal({ entries, onClose }: { entries: Entry[]; onClose: () => void
   const [userAnswer, setUserAnswer] = useState('')
   const [answered, setAnswered] = useState(false)
   const [isCorrect, setIsCorrect] = useState(false)
+  const [choiceOptions, setChoiceOptions] = useState<string[]>([])
+  const [selectedChoice, setSelectedChoice] = useState<string | null>(null)
 
   const startQuiz = (selectedMode: 'pick-word' | 'pick-meaning') => {
     const shuffled = [...entries].sort(() => Math.random() - 0.5).slice(0, 5)
@@ -387,6 +389,23 @@ function QuizModal({ entries, onClose }: { entries: Entry[]; onClose: () => void
     setMode(selectedMode)
     setCurrentIdx(0)
     setScore(0)
+    generateChoices(shuffled, 0, selectedMode)
+  }
+
+  const generateChoices = (data: Entry[], idx: number, quizMode: 'pick-word' | 'pick-meaning') => {
+    const current = data[idx]
+    if (!current) return
+
+    if (quizMode === 'pick-meaning') {
+      const correctAnswer = current.summary
+      const wrongAnswers = data
+        .filter((_, i) => i !== idx)
+        .slice(0, 3)
+        .map((e) => e.summary)
+
+      const allChoices = [correctAnswer, ...wrongAnswers].sort(() => Math.random() - 0.5)
+      setChoiceOptions(allChoices)
+    }
   }
 
   const checkAnswer = () => {
@@ -395,9 +414,13 @@ function QuizModal({ entries, onClose }: { entries: Entry[]; onClose: () => void
 
     let correct = false
     if (mode === 'pick-word') {
-      correct = userAnswer.trim() === current.title
+      const titleParts = current.title.split('(')
+      const korean = titleParts[0]?.trim() || ''
+      const english = titleParts[1]?.replace(')', '').trim() || ''
+      const answer = userAnswer.trim()
+      correct = answer === korean || answer === english || answer === current.title
     } else if (mode === 'pick-meaning') {
-      correct = userAnswer.trim() === current.summary
+      correct = selectedChoice === current.summary
     }
 
     setIsCorrect(correct)
@@ -409,8 +432,10 @@ function QuizModal({ entries, onClose }: { entries: Entry[]; onClose: () => void
     if (currentIdx < quizData.length - 1) {
       setCurrentIdx((prev) => prev + 1)
       setUserAnswer('')
+      setSelectedChoice(null)
       setAnswered(false)
       setIsCorrect(false)
+      generateChoices(quizData, currentIdx + 1, mode!)
     }
   }
 
@@ -462,31 +487,64 @@ function QuizModal({ entries, onClose }: { entries: Entry[]; onClose: () => void
                 ? current.summary
                 : current.title}
             </h3>
-            <input
-              type="text"
-              value={userAnswer}
-              onChange={(e) => setUserAnswer(e.target.value)}
-              placeholder="답을 입력하세요"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  if (!answered) checkAnswer()
-                  else nextQuestion()
-                }
-              }}
-              disabled={answered}
-            />
-            {answered && (
-              <div className={`answer-feedback ${isCorrect ? 'correct' : 'incorrect'}`}>
-                {isCorrect ? (
-                  <p>✓ 맞습니다!</p>
-                ) : (
-                  <p>✗ 틀렸습니다. 정답은 "{mode === 'pick-word' ? current.title : current.summary}"입니다.</p>
+            {mode === 'pick-word' ? (
+              <>
+                <input
+                  type="text"
+                  value={userAnswer}
+                  onChange={(e) => setUserAnswer(e.target.value)}
+                  placeholder="답을 입력하세요"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      if (!answered) checkAnswer()
+                      else nextQuestion()
+                    }
+                  }}
+                  disabled={answered}
+                />
+                {answered && (
+                  <div className={`answer-feedback ${isCorrect ? 'correct' : 'incorrect'}`}>
+                    {isCorrect ? (
+                      <p>✓ 맞습니다!</p>
+                    ) : (
+                      <p>✗ 틀렸습니다. 정답은 "{current.title}"입니다.</p>
+                    )}
+                  </div>
                 )}
-              </div>
+              </>
+            ) : (
+              <>
+                <div className="quiz-choice-buttons">
+                  {choiceOptions.map((choice) => (
+                    <button
+                      key={choice}
+                      className={`
+                        ${selectedChoice === choice ? 'selected' : ''}
+                        ${answered && choice === current.summary ? 'correct' : ''}
+                        ${answered && selectedChoice === choice && !isCorrect ? 'incorrect' : ''}
+                      `.trim()}
+                      onClick={() => !answered && setSelectedChoice(choice)}
+                      disabled={answered}
+                    >
+                      {choice}
+                    </button>
+                  ))}
+                </div>
+                {answered && (
+                  <div className={`answer-feedback ${isCorrect ? 'correct' : 'incorrect'}`}>
+                    {isCorrect ? (
+                      <p>✓ 맞습니다!</p>
+                    ) : (
+                      <p>✗ 틀렸습니다.</p>
+                    )}
+                  </div>
+                )}
+              </>
             )}
             <button
               className="quiz-btn"
               onClick={answered ? nextQuestion : checkAnswer}
+              disabled={mode === 'pick-meaning' && selectedChoice === null && !answered}
             >
               {answered ? '다음' : '제출'}
             </button>
@@ -497,3 +555,4 @@ function QuizModal({ entries, onClose }: { entries: Entry[]; onClose: () => void
   )
 }
 
+export default App

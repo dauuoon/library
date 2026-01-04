@@ -169,7 +169,7 @@
 }
 
 .consonant-divider::after {
-  content: '···································································';
+  content: '····························································································································';
   flex: 1;
   opacity: 0.3;
   overflow: hidden;
@@ -183,11 +183,11 @@
 }
 
 .entry-row.open {
-  background: rgba(15, 23, 42, 0.08);
+  background: var(--row-open);
 }
 
 .entry-row:hover {
-  background: rgba(15, 23, 42, 0.08);
+  background: var(--row-hover);
 }
 
 .accordion {
@@ -552,7 +552,52 @@ button.ghost {
   margin: 0;
   font-size: 12px;
   color: var(--muted);
-  text-align: right;
+  text-align: left;
+}
+
+.quiz-choice-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.quiz-choice-buttons button {
+  padding: 12px;
+  border: 2px solid var(--border);
+  background: var(--bg-secondary);
+  color: var(--text);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.quiz-choice-buttons button:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--bg-hover);
+}
+
+.quiz-choice-buttons button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.quiz-choice-buttons button.selected {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: white;
+}
+
+.quiz-choice-buttons button.correct {
+  border-color: #4caf50;
+  background: #4caf50;
+  color: white;
+}
+
+.quiz-choice-buttons button.incorrect {
+  border-color: #f44336;
+  background: #f44336;
+  color: white;
 }
 
 .quiz-question h3 {
