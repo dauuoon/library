@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "2de030b02c9b8076ab73fd75826af0ad",
+      "title": "테스트",
+      "summary": "이것은 테스트 내용입니다.",
+      "content": "상세 내용",
+      "imageUrl": "",
+      "youtubeUrl": "https://youtu.be/JbN2qmQLxTY?si=RBtTa2WVDT2dt3ks",
+      "source": "",
+      "categories": [],
+      "createdAt": "2026-01-04T11:40:00.000Z",
+      "updatedAt": "2026-01-04T12:10:00.000Z"
+    }
+  ],
+  "lastFetch": "2026-01-04T12:10:57.167Z"
+}

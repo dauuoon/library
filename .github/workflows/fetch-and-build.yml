@@ -1,0 +1,37 @@
+name: Fetch Notion and Build
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 4 * * *'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Fetch Notion data
+        run: npm run fetch
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
+
+      - name: Build
+        run: npm run build
+
+      # Uncomment and adapt to deploy artifacts (e.g., Pages, S3, Vercel)
+      # - name: Upload dist artifact
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: dist
+      #     path: dist
