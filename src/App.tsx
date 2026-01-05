@@ -217,10 +217,17 @@ function EntryList({
               key={entry.id}
               entry={entry}
               categories={categories}
+              entries={entries}
               expanded={expandedId === entry.id}
               onSelectCategory={onSelectCategory}
               onToggle={onToggle}
               onCopy={onCopy}
+              onLinkClick={(targetId) => {
+                onToggle(targetId)
+                setTimeout(() => {
+                  document.getElementById(`entry-${targetId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                }, 100)
+              }}
             />
           ))}
         </div>
@@ -232,20 +239,24 @@ function EntryList({
 function EntryRow({
   entry,
   categories,
+  entries,
   expanded,
   onSelectCategory,
   onToggle,
   onCopy,
+  onLinkClick,
 }: {
   entry: Entry
   categories: Category[]
+  entries: Entry[]
   expanded: boolean
   onSelectCategory: (id: string) => void
   onToggle: (id: string) => void
   onCopy: () => void
+  onLinkClick: (targetId: string) => void
 }) {
   return (
-    <div className={expanded ? 'entry-row open' : 'entry-row'} data-consonant={getInitialConsonant(entry.title)}>
+    <div className={expanded ? 'entry-row open' : 'entry-row'} data-consonant={getInitialConsonant(entry.title)} id={`entry-${entry.id}`}>
       <button className="accordion" onClick={() => onToggle(entry.id)}>
         <div className="accordion-title">
           <div>
@@ -293,7 +304,7 @@ function EntryRow({
             })}
           </div>
         </div>
-        <p className="content-text">{entry.content}</p>
+        {entry.content && <ContentRenderer content={entry.content} entries={entries} onLinkClick={onLinkClick} />}
         {entry.imageUrl && (
           <div className="media-card">
             <img src={entry.imageUrl} alt={entry.title} />
@@ -322,6 +333,56 @@ function EntryRow({
           </p>
         )}
       </div>
+    </div>
+  )
+}
+
+function ContentRenderer({ content, entries, onLinkClick }: { content: string; entries: Entry[]; onLinkClick: (targetId: string) => void }) {
+  const paragraphs = content.split('\n\n').filter(p => p.trim())
+  
+  const renderParagraph = (text: string) => {
+    const linkPattern = /\[\[([^\]]+)\]\]/g
+    const parts: (string | React.ReactNode)[] = []
+    let lastIndex = 0
+    let match
+    
+    while ((match = linkPattern.exec(text)) !== null) {
+      if (match.index > lastIndex) {
+        parts.push(text.slice(lastIndex, match.index))
+      }
+      
+      const linkText = match[1]
+      const targetEntry = entries.find(e => e.title === linkText || e.title.includes(linkText))
+      
+      if (targetEntry) {
+        parts.push(
+          <button
+            key={match.index}
+            className="inline-link"
+            onClick={() => onLinkClick(targetEntry.id)}
+          >
+            {linkText}
+          </button>
+        )
+      } else {
+        parts.push(linkText)
+      }
+      
+      lastIndex = match.index + match[0].length
+    }
+    
+    if (lastIndex < text.length) {
+      parts.push(text.slice(lastIndex))
+    }
+    
+    return parts.length > 0 ? parts : [text]
+  }
+  
+  return (
+    <div className="content-text">
+      {paragraphs.map((para, idx) => (
+        <p key={idx}>{renderParagraph(para)}</p>
+      ))}
     </div>
   )
 }
