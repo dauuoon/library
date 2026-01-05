@@ -16,6 +16,7 @@ function normalizeEntry(input: Partial<Entry>): Entry {
     imageUrl: input.imageUrl,
     youtubeUrl: input.youtubeUrl,
     youtubeTitle: input.youtubeTitle,
+    linkUrl: input.linkUrl,
     source: input.source,
     tags: input.tags ?? [],
     categories: input.categories ?? [],
@@ -318,6 +319,16 @@ function EntryRow({
             rel="noreferrer"
           >
             #1 [유튜브] 영상 보기 ↗
+          </a>
+        )}
+        {entry.linkUrl && (
+          <a
+            className="media-link article-link"
+            href={entry.linkUrl}
+            target="_blank"
+            rel="noreferrer"
+          >
+            #2 [링크] 글 보기 ↗
           </a>
         )}
         {entry.source && (

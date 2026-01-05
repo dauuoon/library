@@ -12,6 +12,7 @@ export type Entry = {
   imageUrl?: string
   youtubeUrl?: string
   youtubeTitle?: string
+  linkUrl?: string
   source?: string
   tags: string[]
   categories: string[]

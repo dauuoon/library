@@ -82,6 +82,7 @@ function extractProperties(page) {
     content: getTextValue(props.content || props.Content),
     imageUrl: getUrlValue(props.imageUrl || props.Image),
     youtubeUrl: getUrlValue(props.youtubeUrl || props.YouTube),
+    linkUrl: getUrlValue(props.linkUrl || props.Link),
     source: getTextValue(props.source || props.Source),
     categories: getMultiSelectValue(props.categories || props.Categories),
     createdAt: page.created_time,

@@ -266,10 +266,10 @@
 
 .content-text {
   margin: 0;
-  line-height: 1.55;
+  line-height: 1.6;
   padding-top: 10px;
   border-top: 1px solid var(--border);
-  opacity: 0.9;
+  opacity: 0.8;
 }
 
 .content-text p {
@@ -344,6 +344,10 @@
   font-weight: 600;
   font-size: 12px;
   text-decoration: underline;
+}
+
+.article-link {
+  color: #3aa7ff;
 }
 
 .media-link:hover {
