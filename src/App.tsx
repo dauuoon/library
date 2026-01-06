@@ -413,19 +413,32 @@ const CONSONANTS = ['ㄱ', 'ㄴ', 'ㄷ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅅ', 'ㅇ', 'ㅈ
 function getInitialConsonant(text: string): string {
   if (!text) return 'ㅇ'
   
-  // 괄호 안의 영문/숫자 제거
+  // 괄호 안의 내용 제거 및 앞뒤 공백 제거
   const cleanText = text.replace(/\([^)]*\)/g, '').trim()
   if (!cleanText) return 'ㅇ'
   
   const char = cleanText[0]
   const code = char.charCodeAt(0)
   
+  // 한글 음절 범위
   if (code >= 0xac00 && code <= 0xd7a3) {
-    const offset = (code - 0xac00) / 28 / 21
-    const consonantIndex = Math.floor(offset)
+    const consonantIndex = Math.floor((code - 0xac00) / 588)
     const consonants = ['ㄱ', 'ㄲ', 'ㄴ', 'ㄷ', 'ㄸ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅃ', 'ㅄ', 'ㅅ', 'ㅆ', 'ㅇ', 'ㅈ', 'ㅉ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ']
     return consonants[consonantIndex] || 'ㅇ'
   }
+  
+  // 영문자인 경우 알파벳을 한글 초성으로 매핑
+  if (/^[A-Za-z]$/.test(char)) {
+    const upper = char.toUpperCase()
+    // A-D → ㄱ, E-H → ㄷ, I-L → ㅁ, M-P → ㅂ, Q-T → ㅅ, U-Z → ㅇ
+    if (upper <= 'D') return 'ㄱ'
+    if (upper <= 'H') return 'ㄷ'
+    if (upper <= 'L') return 'ㅁ'
+    if (upper <= 'P') return 'ㅂ'
+    if (upper <= 'T') return 'ㅅ'
+    return 'ㅇ'
+  }
+  
   return 'ㅇ'
 }
 
