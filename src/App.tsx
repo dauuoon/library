@@ -412,7 +412,12 @@ const CONSONANTS = ['ㄱ', 'ㄴ', 'ㄷ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅅ', 'ㅇ', 'ㅈ
 
 function getInitialConsonant(text: string): string {
   if (!text) return 'ㅇ'
-  const char = text[0]
+  
+  // 괄호 안의 영문/숫자 제거
+  const cleanText = text.replace(/\([^)]*\)/g, '').trim()
+  if (!cleanText) return 'ㅇ'
+  
+  const char = cleanText[0]
   const code = char.charCodeAt(0)
   
   if (code >= 0xac00 && code <= 0xd7a3) {
