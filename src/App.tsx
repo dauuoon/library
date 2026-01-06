@@ -53,7 +53,7 @@ function App() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [showCategories, setShowCategories] = useState(false)
-  const [theme, setTheme] = useState<'light' | 'dark'>('dark')
+  const [theme, setTheme] = useState<'light' | 'dark'>('light')
   const [toastMessage, setToastMessage] = useState<string | null>(null)
   const [showQuiz, setShowQuiz] = useState(false)
 
