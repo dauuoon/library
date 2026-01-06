@@ -413,8 +413,17 @@ const CONSONANTS = ['ㄱ', 'ㄴ', 'ㄷ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅅ', 'ㅇ', 'ㅈ
 function getInitialConsonant(text: string): string {
   if (!text) return 'ㅇ'
   
+  // · (가운뎃점) 뒤의 텍스트가 있으면 우선 사용 (예: DNS · 디엔에스)
+  let targetText = text
+  if (text.includes('·')) {
+    const parts = text.split('·')
+    if (parts[1]) {
+      targetText = parts[1].trim()
+    }
+  }
+  
   // 괄호 안의 내용 제거 및 앞뒤 공백 제거
-  const cleanText = text.replace(/\([^)]*\)/g, '').trim()
+  const cleanText = targetText.replace(/\([^)]*\)/g, '').trim()
   if (!cleanText) return 'ㅇ'
   
   const char = cleanText[0]
