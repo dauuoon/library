@@ -68,6 +68,16 @@ function App() {
     }
   }, [toastMessage])
 
+  const categoryCounts = useMemo(() => {
+    const counts: { [key: string]: number } = {}
+    categories.forEach((cat) => {
+      counts[cat.id] = entries.filter((entry) =>
+        entry.categories.includes(cat.id)
+      ).length
+    })
+    return counts
+  }, [entries, categories])
+
   const filtered = useMemo(() => {
     const base = query.trim() ? searchEntries(entries, query) : entries
     const result = selectedCategory
@@ -113,7 +123,7 @@ function App() {
               className={!selectedCategory ? 'chip active' : 'chip'}
               onClick={() => setSelectedCategory(null)}
             >
-              전체
+              전체({entries.length})
             </button>
             {categories.map((cat) => (
               <button
@@ -122,7 +132,7 @@ function App() {
                 onClick={() => setSelectedCategory(cat.id)}
                 title={cat.description}
               >
-                {cat.name}
+                {cat.name}({categoryCounts[cat.id] || 0})
               </button>
             ))}
           </div>
