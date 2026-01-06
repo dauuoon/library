@@ -12,7 +12,7 @@
   --muted: #5a5a60;
   --border: #d4d2ce;
   --shadow: 0 14px 38px rgba(0, 0, 0, 0.08);
-  font-family: 'Noto Sans KR', 'Helvetica Neue', Arial, sans-serif;
+  font-family: 'Noto Sans KR', 'Noto Color Emoji', 'Segoe UI Emoji', 'Helvetica Neue', Arial, sans-serif;
   color: var(--text);
   background-color: var(--bg);
   text-rendering: optimizeLegibility;
