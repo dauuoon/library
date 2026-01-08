@@ -87,10 +87,11 @@
 .search-actions button {
   display: inline-flex;
   justify-content: center;
-  height: 52px;
-  min-width: 52px;
-  font-size: 20px;
-  border-radius: 12px;
+  align-items: center;
+  height: 44px;
+  min-width: 44px;
+  font-size: 18px;
+  border-radius: 10px;
 }
 
 .panel {
@@ -121,13 +122,13 @@
 .chip {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 7px 11px;
+  gap: 4px;
+  padding: 5px 9px;
   border-radius: 0;
   border: 1px solid var(--border);
   background: var(--panel-2);
   color: var(--text);
-  font-size: 13px;
+  font-size: 11px;
   cursor: pointer;
 }
 
@@ -480,14 +481,14 @@ button.ghost {
 }
 
 .consonant-btn {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   padding: 0;
-  border-radius: 8px;
+  border-radius: 6px;
   border: 1px solid var(--border);
   background: var(--panel-2);
   color: var(--text);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;

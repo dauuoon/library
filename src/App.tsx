@@ -318,7 +318,14 @@ function EntryRow({
         {entry.content && <ContentRenderer content={entry.content} entries={entries} onLinkClick={onLinkClick} />}
         {entry.imageUrl && (
           <div className="media-card">
-            <img src={entry.imageUrl} alt={entry.title} />
+            <img 
+              src={entry.imageUrl} 
+              alt={entry.title}
+              onError={(e) => {
+                const target = e.target as HTMLImageElement
+                target.style.display = 'none'
+              }}
+            />
           </div>
         )}
         {entry.youtubeUrl && (
@@ -442,8 +449,11 @@ function getInitialConsonant(text: string): string {
   // 한글 음절 범위
   if (code >= 0xac00 && code <= 0xd7a3) {
     const consonantIndex = Math.floor((code - 0xac00) / 588)
-    const consonants = ['ㄱ', 'ㄲ', 'ㄴ', 'ㄷ', 'ㄸ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅃ', 'ㅄ', 'ㅅ', 'ㅆ', 'ㅇ', 'ㅈ', 'ㅉ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ']
-    return consonants[consonantIndex] || 'ㅇ'
+    const fullConsonants = ['ㄱ', 'ㄲ', 'ㄴ', 'ㄷ', 'ㄸ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅃ', 'ㅅ', 'ㅆ', 'ㅇ', 'ㅈ', 'ㅉ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ']
+    const consonant = fullConsonants[consonantIndex] || 'ㅇ'
+    // 쌍자음을 기본 자음으로 변환
+    const mapping: { [key: string]: string } = { 'ㄲ': 'ㄱ', 'ㄸ': 'ㄷ', 'ㅃ': 'ㅂ', 'ㅆ': 'ㅅ', 'ㅉ': 'ㅈ' }
+    return mapping[consonant] || consonant
   }
   
   // 영문자인 경우 알파벳을 한글 초성으로 매핑
