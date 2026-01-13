@@ -169,7 +169,7 @@
 }
 
 .consonant-divider::after {
-  content: '····································································································································································································································';
+  content: '····················································································································································································································································';
   flex: 1;
   opacity: 0.3;
   overflow: hidden;
@@ -855,4 +855,36 @@ button.ghost {
   background: var(--accent);
   color: white;
   border-color: var(--accent);
+}
+
+/* 도서 헤더 정보 */
+.book-header-info {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  align-items: center;
+}
+
+.book-year {
+  background: var(--panel-2);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.book-state {
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: white;
+}
+
+.book-author {
+  font-size: 0.875rem;
+  color: var(--muted);
+  margin: 0 0 0.75rem 0;
+  font-style: italic;
 }

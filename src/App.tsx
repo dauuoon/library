@@ -2,9 +2,9 @@ import { useEffect, useMemo, useState } from 'react'
 import './App.css'
 import { seedCategories, seedEntries, searchEntries } from './data'
 import notionData from './data.json'
-import type { Category, Entry } from './types'
+import type { Category, Entry, Book } from './types'
 
-type NotionData = { entries?: Partial<Entry>[] }
+type NotionData = { entries?: Partial<Entry>[]; books?: Partial<Book>[] }
 
 function normalizeEntry(input: Partial<Entry>): Entry {
   const now = new Date().toISOString()
@@ -23,6 +23,28 @@ function normalizeEntry(input: Partial<Entry>): Entry {
     createdAt: input.createdAt ?? now,
     updatedAt: input.updatedAt ?? input.createdAt ?? now,
     viewedAt: input.viewedAt,
+  }
+}
+
+function normalizeBook(input: Partial<Book>): Book {
+  const now = new Date().toISOString()
+  return {
+    id: input.id ?? slugify(input.title ?? 'book'),
+    title: input.title ?? '제목 미정',
+    summary: input.summary ?? '',
+    content: input.content ?? '',
+    imageUrl: input.imageUrl,
+    youtubeUrl: input.youtubeUrl,
+    youtubeTitle: input.youtubeTitle,
+    linkUrl: input.linkUrl,
+    source: input.source,
+    tags: input.tags ?? [],
+    categories: input.categories ?? [],
+    createdAt: input.createdAt ?? now,
+    updatedAt: input.updatedAt ?? input.createdAt ?? now,
+    viewedAt: input.viewedAt,
+    year: input.year ?? new Date().getFullYear(),
+    state: input.state ?? 'unread',
   }
 }
 
@@ -49,6 +71,12 @@ function App() {
     
     return [...seedCategories, ...newCategories]
   })
+  const [books] = useState<Book[]>(() => {
+    const fileBooks = (notionData as NotionData).books ?? []
+    const normalized = fileBooks.map(normalizeBook)
+    return normalized
+  })
+  
   const [query, setQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
@@ -57,6 +85,7 @@ function App() {
   const [toastMessage, setToastMessage] = useState<string | null>(null)
   const [showQuiz, setShowQuiz] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
+  const [currentView, setCurrentView] = useState<'encyclopedia' | 'books'>('encyclopedia')
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
@@ -69,20 +98,37 @@ function App() {
     }
   }, [toastMessage])
 
+  const currentData = currentView === 'encyclopedia' ? entries : books
+  const currentCategories = useMemo(() => {
+    const data = currentView === 'encyclopedia' ? entries : books
+    const categoryNames = new Set<string>()
+    data.forEach((item) => {
+      item.categories.forEach((cat) => {
+        if (typeof cat === 'string') categoryNames.add(cat)
+      })
+    })
+    return [
+      ...categories.filter(cat => categoryNames.has(cat.id)),
+      ...Array.from(categoryNames)
+        .filter(name => !categories.find(cat => cat.id === name))
+        .map(name => ({ id: name, name, description: undefined }))
+    ]
+  }, [currentView, entries, books, categories])
+
   const categoryCounts = useMemo(() => {
     const counts: { [key: string]: number } = {}
-    categories.forEach((cat) => {
-      counts[cat.id] = entries.filter((entry) =>
-        entry.categories.includes(cat.id)
+    currentCategories.forEach((cat) => {
+      counts[cat.id] = currentData.filter((item) =>
+        item.categories.includes(cat.id)
       ).length
     })
     return counts
-  }, [entries, categories])
+  }, [currentData, currentCategories])
 
   const filtered = useMemo(() => {
-    const base = query.trim() ? searchEntries(entries, query) : entries
+    const base = query.trim() ? searchEntries(currentData, query) : currentData
     const result = selectedCategory
-      ? base.filter((entry) => entry.categories.includes(selectedCategory))
+      ? base.filter((item) => item.categories.includes(selectedCategory))
       : base
     return result.sort((a, b) => {
       const consonantA = getInitialConsonant(a.title)
@@ -92,7 +138,7 @@ function App() {
       }
       return CONSONANTS.indexOf(consonantA) - CONSONANTS.indexOf(consonantB)
     })
-  }, [entries, query, selectedCategory])
+  }, [currentData, query, selectedCategory])
 
   const toggleExpand = (id: string) => {
     setExpandedId((prev) => (prev === id ? null : id))
@@ -133,9 +179,9 @@ function App() {
               className={!selectedCategory ? 'chip active' : 'chip'}
               onClick={() => setSelectedCategory(null)}
             >
-              전체({entries.length})
+              전체({currentData.length})
             </button>
-            {categories.map((cat) => (
+            {currentCategories.map((cat) => (
               <button
                 key={cat.id}
                 className={selectedCategory === cat.id ? 'chip active' : 'chip'}
@@ -167,7 +213,7 @@ function App() {
       <section className="panel list-panel">
         <EntryList
           entries={filtered}
-          categories={categories}
+          categories={currentCategories}
           expandedId={expandedId}
           onSelectCategory={(id) => {
             setSelectedCategory(id)
@@ -182,22 +228,30 @@ function App() {
         <div className="menu-overlay" onClick={() => setShowMenu(false)}>
           <div className="menu-drawer" onClick={(e) => e.stopPropagation()}>
             <div className="menu-header">
+              <h2>전체메뉴</h2>
               <button className="icon-button" onClick={() => setShowMenu(false)}>
                 <span className="material-symbols-outlined">close</span>
               </button>
             </div>
             <nav className="menu-nav">
               <button 
-                className="menu-item active"
-                onClick={() => setShowMenu(false)}
+                className={`menu-item ${currentView === 'encyclopedia' ? 'active' : ''}`}
+                onClick={() => {
+                  setCurrentView('encyclopedia')
+                  setShowMenu(false)
+                  setSelectedCategory(null)
+                  setExpandedId(null)
+                }}
               >
                 백과사전
               </button>
               <button 
-                className="menu-item"
+                className={`menu-item ${currentView === 'books' ? 'active' : ''}`}
                 onClick={() => {
-                  setShowMenu(false);
-                  setToastMessage('도서사전은 준비중입니다!')
+                  setCurrentView('books')
+                  setShowMenu(false)
+                  setSelectedCategory(null)
+                  setExpandedId(null)
                 }}
               >
                 도서사전
@@ -215,13 +269,15 @@ function App() {
         >
           <span className="material-symbols-outlined">{theme === 'light' ? 'light_mode' : 'dark_mode'}</span>
         </button>
-        <button
-          className="fab primary"
-          aria-label="퀴즈 게임"
-          onClick={() => setShowQuiz(true)}
-        >
-          <span className="material-symbols-outlined">playing_cards</span>
-        </button>
+        {currentView === 'encyclopedia' && (
+          <button
+            className="fab primary"
+            aria-label="퀴즈 게임"
+            onClick={() => setShowQuiz(true)}
+          >
+            <span className="material-symbols-outlined">playing_cards</span>
+          </button>
+        )}
       </div>
       
       {toastMessage && <div className="toast">{toastMessage}</div>}
@@ -239,7 +295,7 @@ function EntryList({
   onToggle,
   onCopy,
 }: {
-  entries: Entry[]
+  entries: (Entry | Book)[]
   categories: Category[]
   expandedId: string | null
   onSelectCategory: (id: string) => void
@@ -248,7 +304,7 @@ function EntryList({
 }) {
   if (!entries.length) return <p className="hint">결과가 없습니다. 단어를 추가해보세요.</p>
   
-  const grouped: { [key: string]: Entry[] } = {}
+  const grouped: { [key: string]: (Entry | Book)[] } = {}
   entries.forEach((entry) => {
     const consonant = getInitialConsonant(entry.title)
     if (!grouped[consonant]) grouped[consonant] = []
@@ -296,20 +352,52 @@ function EntryRow({
   onCopy,
   onLinkClick,
 }: {
-  entry: Entry
+  entry: Entry | Book
   categories: Category[]
-  entries: Entry[]
+  entries: (Entry | Book)[]
   expanded: boolean
   onSelectCategory: (id: string) => void
   onToggle: (id: string) => void
   onCopy: () => void
   onLinkClick: (targetId: string) => void
 }) {
+  const isBook = 'year' in entry && 'state' in entry
+  const book = isBook ? (entry as Book) : null
+  
+  const getStateLabel = (state: string) => {
+    switch(state) {
+      case 'unread': return '읽기 전'
+      case 'reading': return '읽는 중'
+      case 'completed': return '완료'
+      default: return ''
+    }
+  }
+  
+  const getStateColor = (state: string) => {
+    switch(state) {
+      case 'unread': return '#9CA3AF'
+      case 'reading': return '#F59E0B'
+      case 'completed': return '#10B981'
+      default: return '#9CA3AF'
+    }
+  }
+  
   return (
     <div className={expanded ? 'entry-row open' : 'entry-row'} data-consonant={getInitialConsonant(entry.title)} id={`entry-${entry.id}`}>
       <button className="accordion" onClick={() => onToggle(entry.id)}>
         <div className="accordion-title">
           <div>
+            {isBook && book && (
+              <div className="book-header-info">
+                <span className="book-year">{book.year}년</span>
+                <span 
+                  className="book-state" 
+                  style={{backgroundColor: getStateColor(book.state)}}
+                >
+                  {getStateLabel(book.state)}
+                </span>
+              </div>
+            )}
             <div className="title-row">
               <h3>{entry.title}</h3>
               <button
@@ -336,6 +424,9 @@ function EntryRow({
         </span>
       </button>
       <div className="entry-body" aria-hidden={!expanded}>
+        {isBook && book?.source && (
+          <p className="book-author">저자: {book.source}</p>
+        )}
         <div className="meta-row">
           <div className="meta-chips">
             {entry.categories.map((catId) => {
