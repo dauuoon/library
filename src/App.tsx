@@ -27,6 +27,15 @@ function normalizeEntry(input: Partial<Entry>): Entry {
 }
 
 function normalizeBook(input: Partial<Book>): Book {
+  const normalizeState = (state?: string | null): Book['state'] => {
+    if (!state) return 'unread'
+    const raw = state.toString().trim().toLowerCase()
+    if (['읽기전', '읽기 전', 'unread', '미독', 'not started'].includes(raw)) return 'unread'
+    if (['읽는중', '읽는 중', 'reading', '진행중', 'in progress'].includes(raw)) return 'reading'
+    if (['완료', '완독', 'completed', 'done', 'finished'].includes(raw)) return 'completed'
+    return 'unread'
+  }
+
   const now = new Date().toISOString()
   return {
     id: input.id ?? slugify(input.title ?? 'book'),
@@ -44,7 +53,7 @@ function normalizeBook(input: Partial<Book>): Book {
     updatedAt: input.updatedAt ?? input.createdAt ?? now,
     viewedAt: input.viewedAt,
     year: input.year ?? new Date().getFullYear(),
-    state: input.state ?? 'unread',
+    state: normalizeState(input.state as string | undefined),
   }
 }
 
@@ -140,6 +149,18 @@ function App() {
     })
   }, [currentData, query, selectedCategory])
 
+  const bookStats = useMemo(() => {
+    const yearCounts: { [year: number]: number } = {}
+    books.forEach(book => {
+      if (book.year) {
+        yearCounts[book.year] = (yearCounts[book.year] || 0) + 1
+      }
+    })
+    return Object.entries(yearCounts)
+      .map(([year, count]) => ({ year: parseInt(year), count }))
+      .sort((a, b) => b.year - a.year)
+  }, [books])
+
   const toggleExpand = (id: string) => {
     setExpandedId((prev) => (prev === id ? null : id))
   }
@@ -152,7 +173,7 @@ function App() {
           <SearchBar
             value={query}
             onChange={setQuery}
-            placeholder="단어명으로 검색하세요"
+            placeholder={currentView === 'books' ? "도서명으로 검색하세요" : "단어명으로 검색하세요"}
           />
           <div className="search-actions">
             <button
@@ -210,6 +231,30 @@ function App() {
         </div>
       </section>
 
+      {currentView === 'books' && bookStats.length > 0 && (
+        <div className="book-stats">
+          <div className="stats-grid">
+            {bookStats.map(({ year, count }) => {
+              const maxCount = Math.max(...bookStats.map(s => s.count))
+              const percentage = (count / maxCount) * 100
+              return (
+                <div key={year} className="stat-item">
+                  <span className="stat-year">{year}년</span>
+                  <div className="stat-bar-container">
+                    <div 
+                      className="stat-bar" 
+                      style={{width: `${percentage}%`}}
+                    >
+                      <span className="stat-count">{count}</span>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       <section className="panel list-panel">
         <EntryList
           entries={filtered}
@@ -243,7 +288,7 @@ function App() {
                   setExpandedId(null)
                 }}
               >
-                백과사전
+                전문사전
               </button>
               <button 
                 className={`menu-item ${currentView === 'books' ? 'active' : ''}`}
@@ -383,23 +428,35 @@ function EntryRow({
   }
   
   return (
-    <div className={expanded ? 'entry-row open' : 'entry-row'} data-consonant={getInitialConsonant(entry.title)} id={`entry-${entry.id}`}>
+    <div className={`${expanded ? 'entry-row open' : 'entry-row'} ${isBook ? 'book' : ''}`} data-consonant={getInitialConsonant(entry.title)} id={`entry-${entry.id}`}>
       <button className="accordion" onClick={() => onToggle(entry.id)}>
         <div className="accordion-title">
+          {isBook && (
+            <div className="book-cover-thumbnail">
+              {book?.imageUrl && (
+                <img 
+                  src={book.imageUrl} 
+                  alt={book.title}
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement
+                    target.style.display = 'none'
+                  }}
+                />
+              )}
+            </div>
+          )}
           <div>
-            {isBook && book && (
-              <div className="book-header-info">
-                <span className="book-year">{book.year}년</span>
-                <span 
-                  className="book-state" 
-                  style={{backgroundColor: getStateColor(book.state)}}
-                >
-                  {getStateLabel(book.state)}
-                </span>
-              </div>
-            )}
             <div className="title-row">
               <h3>{entry.title}</h3>
+              {isBook && book && (
+                <>
+                  <span 
+                    className="book-state-dot" 
+                    style={{backgroundColor: getStateColor(book.state)}}
+                    aria-label={getStateLabel(book.state)}
+                  />
+                </>
+              )}
               <button
                 className="copy-icon-btn"
                 type="button"
@@ -417,6 +474,9 @@ function EntryRow({
             <p className="summary" title={entry.summary}>
               {entry.summary}
             </p>
+            {isBook && book?.source && (
+              <p className="book-author-preview">저자: {book.source}</p>
+            )}
           </div>
         </div>
         <span className="accordion-icon" aria-label="toggle">
@@ -424,11 +484,11 @@ function EntryRow({
         </span>
       </button>
       <div className="entry-body" aria-hidden={!expanded}>
-        {isBook && book?.source && (
-          <p className="book-author">저자: {book.source}</p>
-        )}
         <div className="meta-row">
           <div className="meta-chips">
+            {isBook && book?.year && (
+              <span className="chip year-chip">{book.year}년</span>
+            )}
             {entry.categories.map((catId) => {
               const cat = categories.find((c) => c.id === catId)
               if (!cat) return null

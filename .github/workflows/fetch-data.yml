@@ -1,0 +1,42 @@
+name: Fetch Notion Data
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  fetch-data:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+    
+    - name: Install dependencies
+      run: npm install
+    
+    - name: Fetch Notion Data
+      env:
+        NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+        NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
+        NOTION_BOOKS_DATABASE_ID: ${{ secrets.NOTION_BOOKS_DATABASE_ID }}
+      run: node fetch-notion.js
+    
+    - name: Commit and push updated data
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        if git diff --quiet; then
+          echo "No changes to commit"
+        else
+          git add src/data.json
+          git commit -m "chore: update notion data"
+          git push
+        fi
