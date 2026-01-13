@@ -187,7 +187,7 @@ function App() {
       
       {toastMessage && <div className="toast">{toastMessage}</div>}
       
-      {showQuiz && <QuizModal entries={entries} onClose={() => setShowQuiz(false)} />}
+      {showQuiz && <QuizModal entries={entries} categories={categories} onClose={() => setShowQuiz(false)} />}
     </div>
   )
 }
@@ -491,8 +491,9 @@ function SearchBar({
   )
 }
 
-function QuizModal({ entries, onClose }: { entries: Entry[]; onClose: () => void }) {
+function QuizModal({ entries, categories, onClose }: { entries: Entry[]; categories: Category[]; onClose: () => void }) {
   const [mode, setMode] = useState<'pick-word' | 'pick-meaning' | null>(null)
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [quizCount, setQuizCount] = useState<number | null>(null)
   const [quizData, setQuizData] = useState<Entry[]>([])
   const [currentIdx, setCurrentIdx] = useState(0)
@@ -503,14 +504,29 @@ function QuizModal({ entries, onClose }: { entries: Entry[]; onClose: () => void
   const [choiceOptions, setChoiceOptions] = useState<string[]>([])
   const [selectedChoice, setSelectedChoice] = useState<string | null>(null)
 
-  const startQuiz = (selectedMode: 'pick-word' | 'pick-meaning', count: number) => {
-    const shuffled = [...entries].sort(() => Math.random() - 0.5).slice(0, count)
+  const toggleCategory = (categoryId: string) => {
+    setSelectedCategories(prev => 
+      prev.includes(categoryId) 
+        ? prev.filter(id => id !== categoryId)
+        : [...prev, categoryId]
+    )
+  }
+
+  const startQuiz = (count: number) => {
+    // 선택된 카테고리로 필터링
+    let filteredEntries = entries
+    if (selectedCategories.length > 0) {
+      filteredEntries = entries.filter(entry => 
+        entry.categories.some(cat => selectedCategories.includes(cat))
+      )
+    }
+    
+    const shuffled = [...filteredEntries].sort(() => Math.random() - 0.5).slice(0, count)
     setQuizData(shuffled)
-    setMode(selectedMode)
     setQuizCount(count)
     setCurrentIdx(0)
     setScore(0)
-    generateChoices(shuffled, 0, selectedMode)
+    generateChoices(shuffled, 0, mode!)
   }
 
   const generateChoices = (data: Entry[], idx: number, quizMode: 'pick-word' | 'pick-meaning') => {
@@ -572,6 +588,9 @@ function QuizModal({ entries, onClose }: { entries: Entry[]; onClose: () => void
       setAnswered(false)
       setIsCorrect(false)
       generateChoices(quizData, currentIdx + 1, mode!)
+    } else {
+      // 마지막 문제 이후 결과 화면으로
+      setCurrentIdx((prev) => prev + 1)
     }
   }
 
@@ -594,23 +613,61 @@ function QuizModal({ entries, onClose }: { entries: Entry[]; onClose: () => void
     )
   }
 
+  if (selectedCategories.length === 0 && mode) {
+    return (
+      <div className="quiz-overlay">
+        <div className="quiz-modal">
+          <button className="quiz-close" onClick={onClose}>✕</button>
+          <h2>출제 범위를 선택하세요</h2>
+          <p className="quiz-hint">여러 카테고리를 선택할 수 있습니다</p>
+          <div className="quiz-category-grid">
+            {categories.map((cat) => {
+              const count = entries.filter(entry => entry.categories.includes(cat.id)).length
+              const isSelected = selectedCategories.includes(cat.id)
+              return (
+                <button
+                  key={cat.id}
+                  className={`quiz-category-btn ${isSelected ? 'active' : ''}`}
+                  onClick={() => toggleCategory(cat.id)}
+                >
+                  {cat.name} ({count})
+                </button>
+              )
+            })}
+          </div>
+          <button 
+            className="quiz-btn quiz-btn-all" 
+            onClick={() => setSelectedCategories(categories.map(c => c.id))}
+          >
+            전체 선택
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   if (!quizCount) {
+    const availableEntries = entries.filter(entry => 
+      entry.categories.some(cat => selectedCategories.includes(cat))
+    )
+    
     return (
       <div className="quiz-overlay">
         <div className="quiz-modal">
           <button className="quiz-close" onClick={onClose}>✕</button>
           <h2>퀴즈 갯수를 선택하세요</h2>
+          <p className="quiz-hint">선택 범위: {availableEntries.length}개 단어</p>
           <div className="quiz-buttons">
-            <button className="quiz-btn" onClick={() => startQuiz(mode, 5)}>
+            <button className="quiz-btn" onClick={() => startQuiz(5)} disabled={availableEntries.length < 5}>
               5개
             </button>
-            <button className="quiz-btn" onClick={() => startQuiz(mode, 10)}>
+            <button className="quiz-btn" onClick={() => startQuiz(10)} disabled={availableEntries.length < 10}>
               10개
             </button>
-            <button className="quiz-btn" onClick={() => startQuiz(mode, 25)}>
+            <button className="quiz-btn" onClick={() => startQuiz(25)} disabled={availableEntries.length < 25}>
               25개
             </button>
-            <button className="quiz-btn" onClick={() => startQuiz(mode, 50)}>
+            <button className="quiz-btn" onClick={() => startQuiz(50)} disabled={availableEntries.length < 50}>
               50개
             </button>
           </div>
@@ -621,8 +678,9 @@ function QuizModal({ entries, onClose }: { entries: Entry[]; onClose: () => void
 
   if (quizData.length === 0) return null
 
-  const current = quizData[currentIdx]
-  const isFinished = currentIdx === quizData.length - 1 && answered
+  // currentIdx가 quizData.length 이상이면 퀴즈 완료
+  const isFinished = currentIdx >= quizData.length
+  const current = isFinished ? null : quizData[currentIdx]
 
   return (
     <div className="quiz-overlay">
@@ -645,8 +703,8 @@ function QuizModal({ entries, onClose }: { entries: Entry[]; onClose: () => void
             </p>
             <h3>
               {mode === 'pick-word'
-                ? current.summary
-                : current.title}
+                ? current?.summary
+                : current?.title}
             </h3>
             {mode === 'pick-word' ? (
               <>
@@ -668,7 +726,7 @@ function QuizModal({ entries, onClose }: { entries: Entry[]; onClose: () => void
                     {isCorrect ? (
                       <p>✓ 맞습니다!</p>
                     ) : (
-                      <p>✗ 틀렸습니다. 정답은 "{current.title}"입니다.</p>
+                      <p>✗ 틀렸습니다. 정답은 "{current?.title}"입니다.</p>
                     )}
                   </div>
                 )}
@@ -681,7 +739,7 @@ function QuizModal({ entries, onClose }: { entries: Entry[]; onClose: () => void
                       key={choice}
                       className={`
                         ${selectedChoice === choice ? 'selected' : ''}
-                        ${answered && choice === current.summary ? 'correct' : ''}
+                        ${answered && choice === current?.summary ? 'correct' : ''}
                         ${answered && selectedChoice === choice && !isCorrect ? 'incorrect' : ''}
                       `.trim()}
                       onClick={() => !answered && setSelectedChoice(choice)}
