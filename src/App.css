@@ -87,9 +87,8 @@
 .search-actions button {
   display: inline-flex;
   justify-content: center;
-  align-items: center;
-  height: 44px;
-  min-width: 44px;
+  height: 52px;
+  min-width: 52px;
   font-size: 18px;
   border-radius: 10px;
 }
@@ -170,7 +169,7 @@
 }
 
 .consonant-divider::after {
-  content: '····························································································································';
+  content: '··························································································································································';
   flex: 1;
   opacity: 0.3;
   overflow: hidden;
@@ -187,8 +186,10 @@
   background: var(--row-open);
 }
 
-.entry-row:hover {
-  background: var(--row-hover);
+@media (hover: hover) and (pointer: fine) {
+  .entry-row:hover {
+    background: var(--row-hover);
+  }
 }
 
 .accordion {
@@ -228,8 +229,10 @@
   margin-top: 2px;
 }
 
-.copy-icon-btn:hover {
-  color: var(--text);
+@media (hover: hover) and (pointer: fine) {
+  .copy-icon-btn:hover {
+    color: var(--text);
+  }
 }
 
 .copy-icon-btn .material-symbols-outlined {
@@ -293,8 +296,10 @@
   transition: opacity 0.2s;
 }
 
-.inline-link:hover {
-  opacity: 0.7;
+@media (hover: hover) and (pointer: fine) {
+  .inline-link:hover {
+    opacity: 0.7;
+  }
 }
 
 .meta-row {
@@ -351,8 +356,10 @@
   color: #3aa7ff;
 }
 
-.media-link:hover {
-  text-decoration: underline;
+@media (hover: hover) and (pointer: fine) {
+  .media-link:hover {
+    text-decoration: underline;
+  }
 }
 
 .source-ref {
@@ -494,10 +501,12 @@ button.ghost {
   transition: all 0.2s;
 }
 
-.consonant-btn:hover {
-  background: var(--accent);
-  color: var(--panel);
-  border-color: var(--accent);
+@media (hover: hover) and (pointer: fine) {
+  .consonant-btn:hover {
+    background: var(--accent);
+    color: var(--panel);
+    border-color: var(--accent);
+  }
 }
 
 .quiz-overlay {
@@ -561,10 +570,12 @@ button.ghost {
   transition: all 0.2s;
 }
 
-.quiz-btn:hover {
-  background: var(--accent);
-  color: var(--panel);
-  border-color: var(--accent);
+@media (hover: hover) and (pointer: fine) {
+  .quiz-btn:hover {
+    background: var(--accent);
+    color: var(--panel);
+    border-color: var(--accent);
+  }
 }
 
 .quiz-btn:disabled {
@@ -602,9 +613,11 @@ button.ghost {
   transition: all 0.2s ease;
 }
 
-.quiz-choice-buttons button:hover:not(:disabled) {
-  border-color: var(--accent);
-  background: var(--bg-hover);
+@media (hover: hover) and (pointer: fine) {
+  .quiz-choice-buttons button:hover:not(:disabled):not(.selected):not(.correct):not(.incorrect) {
+    border-color: var(--accent);
+    background: var(--bg-hover);
+  }
 }
 
 .quiz-choice-buttons button:disabled {

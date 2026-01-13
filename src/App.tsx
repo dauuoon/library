@@ -493,6 +493,7 @@ function SearchBar({
 
 function QuizModal({ entries, onClose }: { entries: Entry[]; onClose: () => void }) {
   const [mode, setMode] = useState<'pick-word' | 'pick-meaning' | null>(null)
+  const [quizCount, setQuizCount] = useState<number | null>(null)
   const [quizData, setQuizData] = useState<Entry[]>([])
   const [currentIdx, setCurrentIdx] = useState(0)
   const [score, setScore] = useState(0)
@@ -502,10 +503,11 @@ function QuizModal({ entries, onClose }: { entries: Entry[]; onClose: () => void
   const [choiceOptions, setChoiceOptions] = useState<string[]>([])
   const [selectedChoice, setSelectedChoice] = useState<string | null>(null)
 
-  const startQuiz = (selectedMode: 'pick-word' | 'pick-meaning') => {
-    const shuffled = [...entries].sort(() => Math.random() - 0.5).slice(0, 5)
+  const startQuiz = (selectedMode: 'pick-word' | 'pick-meaning', count: number) => {
+    const shuffled = [...entries].sort(() => Math.random() - 0.5).slice(0, count)
     setQuizData(shuffled)
     setMode(selectedMode)
+    setQuizCount(count)
     setCurrentIdx(0)
     setScore(0)
     generateChoices(shuffled, 0, selectedMode)
@@ -565,11 +567,36 @@ function QuizModal({ entries, onClose }: { entries: Entry[]; onClose: () => void
           <button className="quiz-close" onClick={onClose}>✕</button>
           <h2>퀴즈 게임을 선택하세요</h2>
           <div className="quiz-buttons">
-            <button className="quiz-btn" onClick={() => startQuiz('pick-word')}>
-              설명을 읽고 단어 맞추기
+            <button className="quiz-btn" onClick={() => setMode('pick-meaning')}>
+              단어 맞추기
             </button>
-            <button className="quiz-btn" onClick={() => startQuiz('pick-meaning')}>
-              단어를 읽고 설명 맞추기
+            <button className="quiz-btn" onClick={() => setMode('pick-word')}>
+              설명 맞추기
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!quizCount) {
+    return (
+      <div className="quiz-overlay">
+        <div className="quiz-modal">
+          <button className="quiz-close" onClick={onClose}>✕</button>
+          <h2>퀴즈 갯수를 선택하세요</h2>
+          <div className="quiz-buttons">
+            <button className="quiz-btn" onClick={() => startQuiz(mode, 5)}>
+              5개
+            </button>
+            <button className="quiz-btn" onClick={() => startQuiz(mode, 10)}>
+              10개
+            </button>
+            <button className="quiz-btn" onClick={() => startQuiz(mode, 25)}>
+              25개
+            </button>
+            <button className="quiz-btn" onClick={() => startQuiz(mode, 50)}>
+              50개
             </button>
           </div>
         </div>
