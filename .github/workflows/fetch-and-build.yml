@@ -6,6 +6,10 @@ on:
   schedule:
     - cron: '0 4 * * *'
 
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
 permissions:
   contents: read
   pages: write
