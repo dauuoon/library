@@ -529,6 +529,10 @@ function QuizModal({ entries, onClose }: { entries: Entry[]; onClose: () => void
     }
   }
 
+  const normalizeForComparison = (str: string) => {
+    return str.replace(/\s/g, '').toLowerCase()
+  }
+
   const checkAnswer = () => {
     const current = quizData[currentIdx]
     if (!current) return
@@ -539,7 +543,18 @@ function QuizModal({ entries, onClose }: { entries: Entry[]; onClose: () => void
       const korean = titleParts[0]?.trim() || ''
       const english = titleParts[1]?.replace(')', '').trim() || ''
       const answer = userAnswer.trim()
-      correct = answer === korean || answer === english || answer === current.title
+      
+      // 띄어쓰기 제거, 대소문자 무시하여 정규화
+      const normalizedAnswer = normalizeForComparison(answer)
+      const normalizedKorean = normalizeForComparison(korean)
+      const normalizedEnglish = normalizeForComparison(english)
+      const normalizedTitle = normalizeForComparison(current.title)
+      
+      // 정규화된 값과 비교
+      correct = 
+        normalizedAnswer === normalizedKorean ||
+        normalizedAnswer === normalizedEnglish ||
+        normalizedAnswer === normalizedTitle
     } else if (mode === 'pick-meaning') {
       correct = selectedChoice === current.summary
     }
