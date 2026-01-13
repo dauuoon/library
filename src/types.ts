@@ -20,3 +20,8 @@ export type Entry = {
   updatedAt: string
   viewedAt?: string
 }
+
+export type Book = Entry & {
+  year: number
+  state: 'unread' | 'reading' | 'completed'
+}

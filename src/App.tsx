@@ -56,6 +56,7 @@ function App() {
   const [theme, setTheme] = useState<'light' | 'dark'>('light')
   const [toastMessage, setToastMessage] = useState<string | null>(null)
   const [showQuiz, setShowQuiz] = useState(false)
+  const [showMenu, setShowMenu] = useState(false)
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
@@ -110,10 +111,19 @@ function App() {
           <div className="search-actions">
             <button
               className="ghost icon"
-              aria-label="카테고리 보기"
+              aria-label="필터"
               onClick={() => setShowCategories((v) => !v)}
+              title="필터"
             >
-              ☰
+              <span className="material-symbols-outlined">tune</span>
+            </button>
+            <button
+              className="ghost icon"
+              aria-label="전체메뉴"
+              onClick={() => setShowMenu((v) => !v)}
+              title="전체메뉴"
+            >
+              <span className="material-symbols-outlined">menu</span>
             </button>
           </div>
         </div>
@@ -167,6 +177,35 @@ function App() {
           onCopy={() => setToastMessage('복사되었습니다!')}
         />
       </section>
+
+      {showMenu && (
+        <div className="menu-overlay" onClick={() => setShowMenu(false)}>
+          <div className="menu-drawer" onClick={(e) => e.stopPropagation()}>
+            <div className="menu-header">
+              <button className="icon-button" onClick={() => setShowMenu(false)}>
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            <nav className="menu-nav">
+              <button 
+                className="menu-item active"
+                onClick={() => setShowMenu(false)}
+              >
+                백과사전
+              </button>
+              <button 
+                className="menu-item"
+                onClick={() => {
+                  setShowMenu(false);
+                  setToastMessage('도서사전은 준비중입니다!')
+                }}
+              >
+                도서사전
+              </button>
+            </nav>
+          </div>
+        </div>
+      )}
 
       <div className="fab-stack">
         <button
