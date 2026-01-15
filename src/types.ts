@@ -24,4 +24,5 @@ export type Entry = {
 export type Book = Entry & {
   year: number
   state: 'unread' | 'reading' | 'completed'
+  rating?: number
 }

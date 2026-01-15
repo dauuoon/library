@@ -54,6 +54,7 @@ function normalizeBook(input: Partial<Book>): Book {
     viewedAt: input.viewedAt,
     year: input.year ?? new Date().getFullYear(),
     state: normalizeState(input.state as string | undefined),
+    rating: input.rating ? Number(input.rating) : undefined,
   }
 }
 
@@ -476,6 +477,9 @@ function EntryRow({
             {isBook && book?.source && (
               <p className="book-author-preview">저자: {book.source}</p>
             )}
+            {isBook && book?.rating && (
+              <p className="book-rating-preview">⭐️ {book.rating.toFixed(1)}</p>
+            )}
           </div>
         </div>
         <span className="accordion-icon" aria-label="toggle">
@@ -537,7 +541,7 @@ function EntryRow({
             #2 [링크] 글 보기 ↗
           </a>
         )}
-        {entry.source && (
+        {entry.source && !isBook && (
           <p className="source-ref">
             출처:{' '}
             {entry.source.match(/^https?:\/\//i) ? (
