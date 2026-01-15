@@ -137,6 +137,7 @@ function extractBookProperties(page) {
     categories: getMultiSelectValue(props.categories || props.Categories),
     year: getNumberValue(props.year || props.Year),
     state: getSelectValue(props.state || props.State),
+    rating: getNumberValue(props.rating || props.star || props.Star),
     createdAt: page.created_time,
     updatedAt: page.last_edited_time,
   };
