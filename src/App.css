@@ -178,7 +178,6 @@
 }
 
 .entry-row.book {
-  font-family: 'Noto Serif KR', serif;
 }
 
 .entry-row.open {
@@ -311,6 +310,10 @@
   padding-top: 10px;
   border-top: 1px solid var(--border);
   opacity: 0.8;
+}
+
+.entry-row.book .content-text {
+  font-family: 'Noto Serif KR', serif;
 }
 
 .content-text p {
