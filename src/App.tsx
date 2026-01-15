@@ -273,7 +273,6 @@ function App() {
         <div className="menu-overlay" onClick={() => setShowMenu(false)}>
           <div className="menu-drawer" onClick={(e) => e.stopPropagation()}>
             <div className="menu-header">
-              <h2>전체메뉴</h2>
               <button className="icon-button" onClick={() => setShowMenu(false)}>
                 <span className="material-symbols-outlined">close</span>
               </button>
