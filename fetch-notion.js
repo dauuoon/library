@@ -92,6 +92,31 @@ const getUrlValue = (prop) => {
   return '';
 };
 
+const getImageValue = (prop) => {
+  if (!prop) return '';
+  
+  // 첫 번째 호출 시 prop 구조 출력
+  if (!global.loggedImageProp) {
+    console.log('🖼️  Image prop type:', prop.type);
+    if (prop.type === 'files') {
+      console.log('📁 Files data:', JSON.stringify(prop.files, null, 2));
+    }
+    global.loggedImageProp = true;
+  }
+  
+  // 이미지는 files 타입으로 반환됨
+  if (prop.type === 'files' && prop.files && prop.files.length > 0) {
+    const file = prop.files[0];
+    if (file.type === 'external') {
+      return file.external?.url || '';
+    }
+    if (file.type === 'file') {
+      return file.file?.url || '';
+    }
+  }
+  return '';
+};
+
 const getMultiSelectValue = (prop) => {
   return prop?.multi_select?.map(item => item.name) || [];
 };
