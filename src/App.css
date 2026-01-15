@@ -177,10 +177,8 @@
   white-space: nowrap;
 }
 
-.entry-row {
-  border-bottom: none;
-  transition: background 0.2s ease;
-  margin-bottom: 8px;
+.entry-row.book {
+  font-family: 'Noto Serif KR', serif;
 }
 
 .entry-row.open {
