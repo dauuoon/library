@@ -155,7 +155,7 @@ function extractBookProperties(page) {
     title: getTextValue(props.title || props.Title),
     summary: getTextValue(props.summary || props.Summary),
     content: getTextValue(props.content || props.Content),
-    imageUrl: getUrlValue(props.imageUrl || props.Image),
+    imageUrl: getUrlValue(props['imageUrl '] || props.imageUrl || props.Image),
     youtubeUrl: getUrlValue(props.youtubeUrl || props.YouTube),
     linkUrl: getUrlValue(props.linkUrl || props.Link),
     source: getTextValue(props.source || props.Source),
