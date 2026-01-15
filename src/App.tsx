@@ -509,7 +509,7 @@ function EntryRow({
           </div>
         </div>
         {entry.content && <ContentRenderer content={entry.content} entries={entries} onLinkClick={onLinkClick} />}
-        {entry.imageUrl && (
+        {entry.imageUrl && !isBook && (
           <div className="media-card">
             <img 
               src={entry.imageUrl} 

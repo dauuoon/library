@@ -302,7 +302,7 @@
 
 .entry-row.open .entry-body {
   padding: 0 12px 12px 12px;
-  max-height: 2000px;
+  max-height: none;
   opacity: 1;
 }
 
