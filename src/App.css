@@ -961,7 +961,7 @@ button.ghost {
 
 .stat-item {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: 0.375rem;
   background: rgba(255, 255, 255, 0.226);
   padding: 0.25rem 0.5rem;
@@ -1044,7 +1044,7 @@ button.ghost {
 
 .quote-text {
   font-family: 'Noto Serif KR', serif;
-  font-size: 1.1rem;
+  font-size: 1.0rem;
   font-weight: 500;
   line-height: 1.8;
   color: #2c2416;
