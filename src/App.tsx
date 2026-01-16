@@ -96,6 +96,7 @@ function App() {
   const [showQuiz, setShowQuiz] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
   const [currentView, setCurrentView] = useState<'encyclopedia' | 'books'>('encyclopedia')
+  const [randomQuote, setRandomQuote] = useState<{ book: string; paragraph: string } | null>(null)
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
@@ -107,6 +108,24 @@ function App() {
       return () => clearTimeout(timer)
     }
   }, [toastMessage])
+
+  useEffect(() => {
+    // 도서사전일 때 랜덤 문단 선택
+    if (currentView === 'books' && books.length > 0) {
+      const randomBook = books[Math.floor(Math.random() * books.length)]
+      if (randomBook?.content) {
+        const paragraphs = randomBook.content.split('\n\n').filter(p => p.trim().startsWith('✏️'))
+        if (paragraphs.length > 0) {
+          const randomParagraph = paragraphs[Math.floor(Math.random() * paragraphs.length)]
+          setRandomQuote({ book: randomBook.title, paragraph: randomParagraph })
+          return
+        }
+      }
+      setRandomQuote(null)
+    } else {
+      setRandomQuote(null)
+    }
+  }, [currentView, books])
 
   const currentData = currentView === 'encyclopedia' ? entries : books
   const currentCategories = useMemo(() => {
@@ -253,6 +272,12 @@ function App() {
               )
             })}
           </div>
+          {randomQuote && (
+            <div className="random-quote">
+              <p className="quote-text">{randomQuote.paragraph}</p>
+              <p className="quote-book">-{randomQuote.book}-</p>
+            </div>
+          )}
         </div>
       )}
 
