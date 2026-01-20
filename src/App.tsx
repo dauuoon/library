@@ -16,7 +16,7 @@ function buildCategoriesFromEntries(items: (Entry | Book)[], base: Category[] = 
     })
   })
 
-  const additionalCategories = Array.from(additional).map((name) => ({ id: name, name }))
+  const additionalCategories = Array.from(additional).map((name) => ({ id: name, name, description: undefined }))
   return [...baseMap.values(), ...additionalCategories]
 }
 
