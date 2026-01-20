@@ -9,6 +9,7 @@ dotenv.config({ path: '.env.local' });
 const NOTION_TOKEN = process.env.NOTION_TOKEN;
 const RAW_DATABASE_ID = process.env.NOTION_DATABASE_ID;
 const RAW_BOOKS_DATABASE_ID = process.env.NOTION_BOOKS_DATABASE_ID;
+const RAW_COMMONS_DATABASE_ID = process.env.NOTION_COMMONS_DATABASE_ID;
 
 const DATABASE_ID = RAW_DATABASE_ID && RAW_DATABASE_ID.includes('-')
   ? RAW_DATABASE_ID
@@ -20,6 +21,12 @@ const BOOKS_DATABASE_ID = RAW_BOOKS_DATABASE_ID && RAW_BOOKS_DATABASE_ID.include
   ? RAW_BOOKS_DATABASE_ID
   : RAW_BOOKS_DATABASE_ID
       ? `${RAW_BOOKS_DATABASE_ID.slice(0, 8)}-${RAW_BOOKS_DATABASE_ID.slice(8, 12)}-${RAW_BOOKS_DATABASE_ID.slice(12, 16)}-${RAW_BOOKS_DATABASE_ID.slice(16, 20)}-${RAW_BOOKS_DATABASE_ID.slice(20)}`
+      : '';
+
+const COMMONS_DATABASE_ID = RAW_COMMONS_DATABASE_ID && RAW_COMMONS_DATABASE_ID.includes('-')
+  ? RAW_COMMONS_DATABASE_ID
+  : RAW_COMMONS_DATABASE_ID
+      ? `${RAW_COMMONS_DATABASE_ID.slice(0, 8)}-${RAW_COMMONS_DATABASE_ID.slice(8, 12)}-${RAW_COMMONS_DATABASE_ID.slice(12, 16)}-${RAW_COMMONS_DATABASE_ID.slice(16, 20)}-${RAW_COMMONS_DATABASE_ID.slice(20)}`
       : '';
 
 if (!NOTION_TOKEN || !DATABASE_ID) {
@@ -205,9 +212,28 @@ async function main() {
       console.log('  ⓘ 도서사전 ID가 설정되지 않았습니다.');
     }
 
+    // 상식사전 데이터 가져오기
+    let commons = [];
+    if (COMMONS_DATABASE_ID) {
+      console.log('  📗 상식사전 ID:', COMMONS_DATABASE_ID);
+      const commonsResponse = await fetchNotionDatabase(COMMONS_DATABASE_ID);
+
+      if (commonsResponse.object === 'error') {
+        console.warn('⚠️  상식사전 API 오류 (무시함):', commonsResponse.message);
+      } else {
+        commons = commonsResponse.results
+          .map(extractProperties)
+          .filter(common => common.title);
+        console.log(`  ✅ 상식사전: ${commons.length}개 항목`);
+      }
+    } else {
+      console.log('  ⓘ 상식사전 ID가 설정되지 않았습니다.');
+    }
+
     const data = {
       entries,
       books,
+      commons,
       lastFetch: new Date().toISOString(),
     };
 

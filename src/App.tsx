@@ -4,7 +4,21 @@ import { seedCategories, seedEntries, searchEntries } from './data'
 import notionData from './data.json'
 import type { Category, Entry, Book } from './types'
 
-type NotionData = { entries?: Partial<Entry>[]; books?: Partial<Book>[] }
+type NotionData = { entries?: Partial<Entry>[]; books?: Partial<Book>[]; commons?: Partial<Entry>[] }
+
+function buildCategoriesFromEntries(items: (Entry | Book)[], base: Category[] = []) {
+  const baseMap = new Map(base.map((cat) => [cat.id, cat]))
+  const additional = new Set<string>()
+
+  items.forEach((item) => {
+    item.categories.forEach((cat) => {
+      if (typeof cat === 'string' && !baseMap.has(cat)) additional.add(cat)
+    })
+  })
+
+  const additionalCategories = Array.from(additional).map((name) => ({ id: name, name }))
+  return [...baseMap.values(), ...additionalCategories]
+}
 
 function normalizeEntry(input: Partial<Entry>): Entry {
   const now = new Date().toISOString()
@@ -58,34 +72,30 @@ function normalizeBook(input: Partial<Book>): Book {
   }
 }
 
+const stripLeadingQuoteMarks = (text: string) => text.replace(/^["“”']+/, '').trimStart()
+
 function App() {
   const [entries] = useState<Entry[]>(() => {
     const fileEntries = (notionData as NotionData).entries ?? []
     const normalized = fileEntries.map(normalizeEntry)
     return normalized.length ? normalized : seedEntries
   })
-  
-  const [categories] = useState<Category[]>(() => {
-    const fileEntries = (notionData as NotionData).entries ?? []
-    const notionCategoryNames = new Set<string>()
-    fileEntries.forEach((entry) => {
-      entry.categories?.forEach((cat) => {
-        if (typeof cat === 'string') notionCategoryNames.add(cat)
-      })
-    })
-    
-    const newCategories = Array.from(notionCategoryNames).map((name) => ({
-      id: name,
-      name,
-    }))
-    
-    return [...seedCategories, ...newCategories]
+
+  const [commons] = useState<Entry[]>(() => {
+    const fileCommons = (notionData as NotionData).commons ?? []
+    const normalized = fileCommons.map(normalizeEntry)
+    return normalized
   })
+
   const [books] = useState<Book[]>(() => {
     const fileBooks = (notionData as NotionData).books ?? []
     const normalized = fileBooks.map(normalizeBook)
     return normalized
   })
+
+  const encyclopediaCategories = useMemo(() => buildCategoriesFromEntries(entries, seedCategories), [entries])
+  const commonsCategories = useMemo(() => buildCategoriesFromEntries(commons), [commons])
+  const bookCategories = useMemo(() => buildCategoriesFromEntries(books), [books])
   
   const [query, setQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
@@ -95,7 +105,7 @@ function App() {
   const [toastMessage, setToastMessage] = useState<string | null>(null)
   const [showQuiz, setShowQuiz] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
-  const [currentView, setCurrentView] = useState<'encyclopedia' | 'books'>('encyclopedia')
+  const [currentView, setCurrentView] = useState<'encyclopedia' | 'commons' | 'books'>('encyclopedia')
   const [randomQuote, setRandomQuote] = useState<{ book: string; paragraph: string } | null>(null)
 
   useEffect(() => {
@@ -114,10 +124,14 @@ function App() {
     if (currentView === 'books' && books.length > 0) {
       const randomBook = books[Math.floor(Math.random() * books.length)]
       if (randomBook?.content) {
-        const paragraphs = randomBook.content.split('\n\n').filter(p => p.trim().startsWith('✏️'))
+        const paragraphs = randomBook.content
+          .split('\n\n')
+          .map(p => p.trim())
+          .map(stripLeadingQuoteMarks)
+          .filter(p => p.startsWith('✏️'))
         if (paragraphs.length > 0) {
           const randomParagraph = paragraphs[Math.floor(Math.random() * paragraphs.length)]
-          setRandomQuote({ book: randomBook.title, paragraph: randomParagraph })
+          setRandomQuote({ book: randomBook.title, paragraph: stripLeadingQuoteMarks(randomParagraph) })
           return
         }
       }
@@ -127,22 +141,17 @@ function App() {
     }
   }, [currentView, books])
 
-  const currentData = currentView === 'encyclopedia' ? entries : books
+  const currentData = useMemo(() => {
+    if (currentView === 'commons') return commons
+    if (currentView === 'books') return books
+    return entries
+  }, [currentView, entries, commons, books])
+
   const currentCategories = useMemo(() => {
-    const data = currentView === 'encyclopedia' ? entries : books
-    const categoryNames = new Set<string>()
-    data.forEach((item) => {
-      item.categories.forEach((cat) => {
-        if (typeof cat === 'string') categoryNames.add(cat)
-      })
-    })
-    return [
-      ...categories.filter(cat => categoryNames.has(cat.id)),
-      ...Array.from(categoryNames)
-        .filter(name => !categories.find(cat => cat.id === name))
-        .map(name => ({ id: name, name, description: undefined }))
-    ]
-  }, [currentView, entries, books, categories])
+    if (currentView === 'commons') return commonsCategories
+    if (currentView === 'books') return bookCategories
+    return encyclopediaCategories
+  }, [currentView, commonsCategories, bookCategories, encyclopediaCategories])
 
   const categoryCounts = useMemo(() => {
     const counts: { [key: string]: number } = {}
@@ -193,7 +202,13 @@ function App() {
           <SearchBar
             value={query}
             onChange={setQuery}
-            placeholder={currentView === 'books' ? "도서명으로 검색하세요" : "단어명으로 검색하세요"}
+            placeholder={
+              currentView === 'books'
+                ? '도서명으로 검색하세요'
+                : currentView === 'commons'
+                  ? '상식 단어로 검색하세요'
+                  : '단어명으로 검색하세요'
+            }
           />
           <div className="search-actions">
             <button
@@ -326,6 +341,17 @@ function App() {
               >
                 도서사전
               </button>
+              <button 
+                className={`menu-item ${currentView === 'commons' ? 'active' : ''}`}
+                onClick={() => {
+                  setCurrentView('commons')
+                  setShowMenu(false)
+                  setSelectedCategory(null)
+                  setExpandedId(null)
+                }}
+              >
+                상식사전
+              </button>
             </nav>
           </div>
         </div>
@@ -339,7 +365,7 @@ function App() {
         >
           <span className="material-symbols-outlined">{theme === 'light' ? 'light_mode' : 'dark_mode'}</span>
         </button>
-        {currentView === 'encyclopedia' && (
+        {(currentView === 'encyclopedia' || currentView === 'commons') && (
           <button
             className="fab primary"
             aria-label="퀴즈 게임"
@@ -352,7 +378,11 @@ function App() {
       
       {toastMessage && <div className="toast">{toastMessage}</div>}
       
-      {showQuiz && <QuizModal entries={entries} categories={categories} onClose={() => setShowQuiz(false)} />}
+      {showQuiz && <QuizModal 
+        entries={currentView === 'commons' ? commons : entries} 
+        categories={currentView === 'commons' ? commonsCategories : encyclopediaCategories} 
+        onClose={() => setShowQuiz(false)} 
+      />}
     </div>
   )
 }

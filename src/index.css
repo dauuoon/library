@@ -45,6 +45,26 @@ body {
   color: var(--text);
 }
 
+body,
+p,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.summary,
+.content-text,
+.quote-text,
+.quiz-question,
+.quiz-btn,
+.quiz-choice-buttons button,
+.menu-item,
+.chip {
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
 a {
   color: inherit;
   text-decoration: none;
