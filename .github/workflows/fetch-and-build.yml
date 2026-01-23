@@ -35,6 +35,7 @@ jobs:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
           NOTION_BOOKS_DATABASE_ID: ${{ secrets.NOTION_BOOKS_DATABASE_ID }}
+          NOTION_COMMONS_DATABASE_ID: ${{ secrets.NOTION_COMMONS_DATABASE_ID }}
 
       - name: Build
         run: npm run build
