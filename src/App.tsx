@@ -4,7 +4,13 @@ import { seedCategories, seedEntries, searchEntries } from './data'
 import notionData from './data.json'
 import type { Category, Entry, Book } from './types'
 
-type NotionData = { entries?: Partial<Entry>[]; books?: Partial<Book>[]; commons?: Partial<Entry>[] }
+type NotionBook = Omit<Partial<Book>, 'rating' | 'mediaType' | 'state'> & {
+  rating?: number | null
+  mediaType?: string | null
+  state?: string | null
+}
+
+type NotionData = { entries?: Partial<Entry>[]; books?: NotionBook[]; commons?: Partial<Entry>[] }
 
 function buildCategoriesFromEntries(items: (Entry | Book)[], base: Category[] = []) {
   const baseMap = new Map(base.map((cat) => [cat.id, cat]))
@@ -59,7 +65,7 @@ function normalizeEntry(input: Partial<Entry>): Entry {
   }
 }
 
-function normalizeBook(input: Partial<Book>): Book {
+function normalizeBook(input: NotionBook): Book {
   const normalizeState = (state?: string | null): Book['state'] => {
     if (!state) return 'unread'
     const raw = state.toString().trim().toLowerCase()
@@ -86,9 +92,9 @@ function normalizeBook(input: Partial<Book>): Book {
     updatedAt: input.updatedAt ?? input.createdAt ?? now,
     viewedAt: input.viewedAt,
     year: input.year ?? new Date().getFullYear(),
-    state: normalizeState(input.state as string | undefined),
-    rating: input.rating ? Number(input.rating) : undefined,
-    mediaType: input.mediaType ? fixText(input.mediaType as string) : undefined,
+    state: normalizeState(input.state),
+    rating: input.rating == null ? undefined : Number(input.rating),
+    mediaType: input.mediaType ? fixText(input.mediaType) : undefined,
   }
 }
 
