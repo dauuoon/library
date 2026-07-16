@@ -20,18 +20,37 @@ function buildCategoriesFromEntries(items: (Entry | Book)[], base: Category[] = 
   return [...baseMap.values(), ...additionalCategories]
 }
 
+function fixText(value?: string): string {
+  if (!value) return ''
+  try {
+    let s = value.normalize('NFC')
+    // zero-width / BOM / replacement chars
+    s = s.replace(/[\u200B-\u200D\u2060\uFEFF]/g, '')
+    s = s.replace(/\uFFFD+/g, '')
+    // smart quotes, dashes, ellipsis
+    s = s
+      .replace(/[“”]/g, '"')
+      .replace(/[‘’]/g, "'")
+      .replace(/…/g, '...')
+      .replace(/–|—/g, '-')
+    return s
+  } catch {
+    return value
+  }
+}
+
 function normalizeEntry(input: Partial<Entry>): Entry {
   const now = new Date().toISOString()
   return {
     id: input.id ?? slugify(input.title ?? 'entry'),
-    title: input.title ?? '제목 미정',
-    summary: input.summary ?? '',
-    content: input.content ?? '',
+    title: fixText(input.title) || '제목 미정',
+    summary: fixText(input.summary),
+    content: fixText(input.content),
     imageUrl: input.imageUrl,
     youtubeUrl: input.youtubeUrl,
     youtubeTitle: input.youtubeTitle,
     linkUrl: input.linkUrl,
-    source: input.source,
+    source: input.source ? fixText(input.source) : input.source,
     tags: input.tags ?? [],
     categories: input.categories ?? [],
     createdAt: input.createdAt ?? now,
@@ -53,14 +72,14 @@ function normalizeBook(input: Partial<Book>): Book {
   const now = new Date().toISOString()
   return {
     id: input.id ?? slugify(input.title ?? 'book'),
-    title: input.title ?? '제목 미정',
-    summary: input.summary ?? '',
-    content: input.content ?? '',
+    title: fixText(input.title) || '제목 미정',
+    summary: fixText(input.summary),
+    content: fixText(input.content),
     imageUrl: input.imageUrl,
     youtubeUrl: input.youtubeUrl,
     youtubeTitle: input.youtubeTitle,
     linkUrl: input.linkUrl,
-    source: input.source,
+    source: input.source ? fixText(input.source) : input.source,
     tags: input.tags ?? [],
     categories: input.categories ?? [],
     createdAt: input.createdAt ?? now,
@@ -69,10 +88,15 @@ function normalizeBook(input: Partial<Book>): Book {
     year: input.year ?? new Date().getFullYear(),
     state: normalizeState(input.state as string | undefined),
     rating: input.rating ? Number(input.rating) : undefined,
+    mediaType: input.mediaType ? fixText(input.mediaType as string) : undefined,
   }
 }
 
-const stripLeadingQuoteMarks = (text: string) => text.replace(/^["“”']+/, '').trimStart()
+const stripLeadingQuoteMarks = (text: string) =>
+  text
+    .replace(/^["“”']+/, '')
+    .replace(/["“”']+$/, '')
+    .trim()
 
 function App() {
   const [entries] = useState<Entry[]>(() => {
@@ -93,9 +117,26 @@ function App() {
     return normalized
   })
 
+  const pureBooks = useMemo(
+    () => books.filter((book) => {
+      const type = book.mediaType?.trim()
+      return !type || type === '도서'
+    }),
+    [books],
+  )
+
+  const moviesList = useMemo(
+    () => books.filter((book) => {
+      const type = book.mediaType?.trim()
+      return type && type !== '도서'
+    }),
+    [books],
+  )
+
   const encyclopediaCategories = useMemo(() => buildCategoriesFromEntries(entries, seedCategories), [entries])
   const commonsCategories = useMemo(() => buildCategoriesFromEntries(commons), [commons])
-  const bookCategories = useMemo(() => buildCategoriesFromEntries(books), [books])
+  const bookCategories = useMemo(() => buildCategoriesFromEntries(pureBooks), [pureBooks])
+  const movieCategories = useMemo(() => buildCategoriesFromEntries(moviesList), [moviesList])
   
   const [query, setQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
@@ -105,12 +146,25 @@ function App() {
   const [toastMessage, setToastMessage] = useState<string | null>(null)
   const [showQuiz, setShowQuiz] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
-  const [currentView, setCurrentView] = useState<'encyclopedia' | 'commons' | 'books'>('encyclopedia')
+  const [currentView, setCurrentView] = useState<'encyclopedia' | 'commons' | 'books' | 'movies' | 'stats'>('encyclopedia')
   const [randomQuote, setRandomQuote] = useState<{ book: string; paragraph: string } | null>(null)
+  const [clickCounts, setClickCounts] = useState<Record<string, number>>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('clickCounts_v1') || '{}')
+    } catch {
+      return {}
+    }
+  })
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
   }, [theme])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('clickCounts_v1', JSON.stringify(clickCounts))
+    } catch {}
+  }, [clickCounts])
 
   useEffect(() => {
     if (toastMessage) {
@@ -121,8 +175,8 @@ function App() {
 
   useEffect(() => {
     // 도서사전일 때 랜덤 문단 선택
-    if (currentView === 'books' && books.length > 0) {
-      const randomBook = books[Math.floor(Math.random() * books.length)]
+    if (currentView === 'books' && pureBooks.length > 0) {
+      const randomBook = pureBooks[Math.floor(Math.random() * pureBooks.length)]
       if (randomBook?.content) {
         const paragraphs = randomBook.content
           .split('\n\n')
@@ -139,19 +193,21 @@ function App() {
     } else {
       setRandomQuote(null)
     }
-  }, [currentView, books])
+  }, [currentView, pureBooks])
 
   const currentData = useMemo(() => {
     if (currentView === 'commons') return commons
-    if (currentView === 'books') return books
+    if (currentView === 'books') return pureBooks
+    if (currentView === 'movies') return moviesList
     return entries
-  }, [currentView, entries, commons, books])
+  }, [currentView, entries, commons, pureBooks, moviesList])
 
   const currentCategories = useMemo(() => {
     if (currentView === 'commons') return commonsCategories
     if (currentView === 'books') return bookCategories
+    if (currentView === 'movies') return movieCategories
     return encyclopediaCategories
-  }, [currentView, commonsCategories, bookCategories, encyclopediaCategories])
+  }, [currentView, commonsCategories, bookCategories, movieCategories, encyclopediaCategories])
 
   const categoryCounts = useMemo(() => {
     const counts: { [key: string]: number } = {}
@@ -180,7 +236,7 @@ function App() {
 
   const bookStats = useMemo(() => {
     const yearCounts: { [year: number]: number } = {}
-    books.forEach(book => {
+    pureBooks.forEach(book => {
       if (book.year) {
         yearCounts[book.year] = (yearCounts[book.year] || 0) + 1
       }
@@ -188,10 +244,28 @@ function App() {
     return Object.entries(yearCounts)
       .map(([year, count]) => ({ year: parseInt(year), count }))
       .sort((a, b) => b.year - a.year)
-  }, [books])
+  }, [pureBooks])
+
+  const movieStats = useMemo(() => {
+    const yearCounts: { [year: number]: number } = {}
+    moviesList.forEach(item => {
+      if (item.year) {
+        yearCounts[item.year] = (yearCounts[item.year] || 0) + 1
+      }
+    })
+    return Object.entries(yearCounts)
+      .map(([year, count]) => ({ year: parseInt(year), count }))
+      .sort((a, b) => b.year - a.year)
+  }, [moviesList])
 
   const toggleExpand = (id: string) => {
-    setExpandedId((prev) => (prev === id ? null : id))
+    setExpandedId((prev) => {
+      const next = prev === id ? null : id
+      if (next === id) {
+        setClickCounts((prevCounts) => ({ ...prevCounts, [id]: (prevCounts[id] || 0) + 1 }))
+      }
+      return next
+    })
   }
 
 
@@ -199,37 +273,58 @@ function App() {
     <div className="shell">
       <section className="search-dock">
         <div className="search-row">
-          <SearchBar
-            value={query}
-            onChange={setQuery}
-            placeholder={
-              currentView === 'books'
-                ? '도서명으로 검색하세요'
-                : currentView === 'commons'
-                  ? '상식 단어로 검색하세요'
-                  : '단어명으로 검색하세요'
-            }
-          />
-          <div className="search-actions">
-            <button
-              className="ghost icon"
-              aria-label="필터"
-              onClick={() => setShowCategories((v) => !v)}
-              title="필터"
-            >
-              <span className="material-symbols-outlined">tune</span>
-            </button>
-            <button
-              className="ghost icon"
-              aria-label="전체메뉴"
-              onClick={() => setShowMenu((v) => !v)}
-              title="전체메뉴"
-            >
-              <span className="material-symbols-outlined">menu</span>
-            </button>
-          </div>
+          {currentView === 'stats' ? (
+            <>
+              <div className="stats-title">통계</div>
+              <div className="search-actions">
+                <button
+                  className="ghost icon"
+                  aria-label="전체메뉴"
+                  onClick={() => setShowMenu((v) => !v)}
+                  title="전체메뉴"
+                >
+                  <span className="material-symbols-outlined">menu</span>
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <SearchBar
+                value={query}
+                onChange={setQuery}
+                placeholder={
+                  currentView === 'books'
+                    ? '도서명으로 검색하세요'
+                    : currentView === 'movies'
+                      ? '영화·시리즈명으로 검색하세요'
+                      : currentView === 'commons'
+                          ? '이론 단어로 검색하세요'
+                          : '단어명으로 검색하세요'
+
+                }
+              />
+              <div className="search-actions">
+                <button
+                  className="ghost icon"
+                  aria-label="필터"
+                  onClick={() => setShowCategories((v) => !v)}
+                  title="필터"
+                >
+                  <span className="material-symbols-outlined">tune</span>
+                </button>
+                <button
+                  className="ghost icon"
+                  aria-label="전체메뉴"
+                  onClick={() => setShowMenu((v) => !v)}
+                  title="전체메뉴"
+                >
+                  <span className="material-symbols-outlined">menu</span>
+                </button>
+              </div>
+            </>
+          )}
         </div>
-        {showCategories && (
+        {currentView !== 'stats' && showCategories && (
           <div className="chips dropdown">
             <button
               className={!selectedCategory ? 'chip active' : 'chip'}
@@ -250,42 +345,33 @@ function App() {
           </div>
         )}
 
-        <div className="consonants-row">
-          {CONSONANTS.map((consonant) => (
-            <button
-              key={consonant}
-              className="consonant-btn"
-              onClick={() => {
-                const element = document.querySelector(`[data-consonant="${consonant}"]`)
-                element?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-              }}
-            >
-              {consonant}
-            </button>
-          ))}
-        </div>
+        {currentView !== 'stats' && currentView !== 'books' && currentView !== 'movies' && (
+          <div className="consonants-row">
+            {CONSONANTS.map((consonant) => (
+              <button
+                key={consonant}
+                className="consonant-btn"
+                onClick={() => {
+                  const element = document.querySelector(`[data-consonant="${consonant}"]`)
+                  element?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                }}
+              >
+                {consonant}
+              </button>
+            ))}
+          </div>
+        )}
       </section>
 
       {currentView === 'books' && bookStats.length > 0 && (
         <div className="book-stats">
           <div className="stats-grid">
-            {bookStats.map(({ year, count }) => {
-              const maxCount = Math.max(...bookStats.map(s => s.count))
-              const percentage = (count / maxCount) * 100
-              return (
-                <div key={year} className="stat-item">
-                  <span className="stat-year">{year}년</span>
-                  <div className="stat-bar-container">
-                    <div 
-                      className="stat-bar" 
-                      style={{width: `${percentage}%`}}
-                    >
-                      <span className="stat-count">{count}</span>
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
+            {bookStats.map(({ year, count }) => (
+              <div key={year} className="stat-item">
+                <span className="stat-year">{year}년</span>
+                <span className="stat-badge">{count}</span>
+              </div>
+            ))}
           </div>
           {randomQuote && (
             <div className="random-quote">
@@ -296,19 +382,46 @@ function App() {
         </div>
       )}
 
-      <section className="panel list-panel">
-        <EntryList
-          entries={filtered}
-          categories={currentCategories}
-          expandedId={expandedId}
-          onSelectCategory={(id) => {
-            setSelectedCategory(id)
-            setShowCategories(true)
-          }}
-          onToggle={toggleExpand}
-          onCopy={() => setToastMessage('복사되었습니다!')}
+      {currentView === 'movies' && movieStats.length > 0 && (
+        <div className="book-stats">
+          <div className="stats-grid">
+            {movieStats.map(({ year, count }) => (
+              <div key={year} className="stat-item">
+                <span className="stat-year">{year}년</span>
+                <span className="stat-badge">{count}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {currentView === 'stats' ? (
+        <StatsPanel
+          entries={entries}
+          commons={commons}
+          books={pureBooks}
+          movies={moviesList}
+          encyclopediaCategories={encyclopediaCategories}
+          commonsCategories={commonsCategories}
+          bookCategories={bookCategories}
+          movieCategories={movieCategories}
+          clickCounts={clickCounts}
         />
-      </section>
+      ) : (
+        <section className="panel list-panel">
+          <EntryList
+            entries={filtered}
+            categories={currentCategories}
+            expandedId={expandedId}
+            onSelectCategory={(id) => {
+              setSelectedCategory(id)
+              setShowCategories(true)
+            }}
+            onToggle={toggleExpand}
+            onCopy={() => setToastMessage('복사되었습니다!')}
+          />
+        </section>
+      )}
 
       {showMenu && (
         <div className="menu-overlay" onClick={() => setShowMenu(false)}>
@@ -331,6 +444,18 @@ function App() {
                 전문사전
               </button>
               <button 
+                className={`menu-item ${currentView === 'commons' ? 'active' : ''}`}
+                onClick={() => {
+                  setCurrentView('commons')
+                  setShowMenu(false)
+                  setSelectedCategory(null)
+                  setExpandedId(null)
+                }}
+              >
+                이론사전
+              </button>
+              <div className="menu-divider" />
+              <button 
                 className={`menu-item ${currentView === 'books' ? 'active' : ''}`}
                 onClick={() => {
                   setCurrentView('books')
@@ -342,15 +467,27 @@ function App() {
                 도서사전
               </button>
               <button 
-                className={`menu-item ${currentView === 'commons' ? 'active' : ''}`}
+                className={`menu-item ${currentView === 'movies' ? 'active' : ''}`}
                 onClick={() => {
-                  setCurrentView('commons')
+                  setCurrentView('movies')
                   setShowMenu(false)
                   setSelectedCategory(null)
                   setExpandedId(null)
                 }}
               >
-                상식사전
+                영화·시리즈사전
+              </button>
+              <div className="menu-divider" />
+              <button 
+                className={`menu-item ${currentView === 'stats' ? 'active' : ''}`}
+                onClick={() => {
+                  setCurrentView('stats')
+                  setShowMenu(false)
+                  setSelectedCategory(null)
+                  setExpandedId(null)
+                }}
+              >
+                통계
               </button>
             </nav>
           </div>
@@ -546,6 +683,9 @@ function EntryRow({
           <div className="meta-chips">
             {isBook && book?.year && (
               <span className="chip year-chip">{book.year}년</span>
+            )}
+            {isBook && book?.mediaType && (
+              <span className="chip ghost-chip media-type-chip">{book.mediaType}</span>
             )}
             {entry.categories.map((catId) => {
               const cat = categories.find((c) => c.id === catId)
@@ -1019,6 +1159,296 @@ function QuizModal({ entries, categories, onClose }: { entries: Entry[]; categor
         )}
       </div>
     </div>
+  )
+}
+
+function StatsPanel({
+  entries,
+  commons,
+  books,
+  movies,
+  encyclopediaCategories,
+  commonsCategories,
+  bookCategories,
+  movieCategories,
+  clickCounts,
+}: {
+  entries: Entry[]
+  commons: Entry[]
+  books: Book[]
+  movies: Book[]
+  encyclopediaCategories: Category[]
+  commonsCategories: Category[]
+  bookCategories: Category[]
+  movieCategories: Category[]
+  clickCounts: Record<string, number>
+}) {
+  const [section, setSection] = useState<'books' | 'movies' | 'encyclopedia' | 'commons'>('books')
+
+  const categoryContext = useMemo(() => {
+    const sourceItems = section === 'books' ? books : section === 'movies' ? movies : section === 'commons' ? commons : entries
+    const sourceCategories = section === 'books'
+      ? bookCategories
+      : section === 'movies'
+        ? movieCategories
+        : section === 'commons'
+          ? commonsCategories
+          : encyclopediaCategories
+
+    const counts: Record<string, number> = {}
+    sourceCategories.forEach((cat) => {
+      counts[cat.id] = sourceItems.filter((item) => item.categories.includes(cat.id)).length
+    })
+
+    return { items: sourceItems, categories: sourceCategories, counts }
+  }, [section, books, movies, commons, entries, bookCategories, movieCategories, commonsCategories, encyclopediaCategories])
+
+  const isLibrarySection = section === 'books' || section === 'movies'
+
+  const yearStats = useMemo(() => {
+    if (!isLibrarySection) return [] as { year: number; count: number }[]
+    const source = section === 'books' ? books : movies
+    const map: Record<number, number> = {}
+    source.forEach((item) => {
+      if (item.year) {
+        map[item.year] = (map[item.year] || 0) + 1
+      }
+    })
+    return Object.entries(map)
+      .map(([year, count]) => ({ year: Number(year), count: count as number }))
+      .sort((a, b) => b.year - a.year)
+  }, [section, isLibrarySection, books, movies])
+
+  const clickRanking = useMemo(() => {
+    if (isLibrarySection) return [] as { id: string; count: number; title: string }[]
+    const dataset = section === 'commons' ? commons : entries
+    const ids = new Set(dataset.map((item) => item.id))
+    return Object.entries(clickCounts)
+      .filter(([id]) => ids.has(id))
+      .sort((a, b) => (b[1] || 0) - (a[1] || 0))
+      .slice(0, 20)
+      .map(([id, count]) => ({ id, count, title: (dataset.find((item) => item.id === id)?.title) || id }))
+  }, [isLibrarySection, section, commons, entries, clickCounts])
+
+  const adjustColor = (hex: string, amount: number) => {
+    let color = hex.replace('#', '')
+    if (color.length === 3) {
+      color = color.split('').map((c) => c + c).join('')
+    }
+    const num = parseInt(color, 16)
+    let r = (num >> 16) & 0xff
+    let g = (num >> 8) & 0xff
+    let b = num & 0xff
+
+    if (amount >= 0) {
+      r = Math.round(r + (255 - r) * amount)
+      g = Math.round(g + (255 - g) * amount)
+      b = Math.round(b + (255 - b) * amount)
+    } else {
+      const factor = 1 + amount
+      r = Math.round(r * factor)
+      g = Math.round(g * factor)
+      b = Math.round(b * factor)
+    }
+
+    return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`
+  }
+
+  const categoryPieData = useMemo(() => {
+    if (!isLibrarySection) {
+      return { segments: [] as { name: string; count: number; colors: { from: string; to: string } }[], total: 0 }
+    }
+
+    const segments = categoryContext.categories
+      .map((cat) => ({ name: cat.name, id: cat.id, count: categoryContext.counts[cat.id] || 0 }))
+      .filter((segment) => segment.count > 0)
+      .sort((a, b) => b.count - a.count)
+
+    const total = segments.reduce((sum, segment) => sum + segment.count, 0)
+    const palette = ['#A3D5FF', '#C7F2A4', '#FFD6A5', '#FFADB0', '#D7BDE2', '#B2DFDB', '#F9E2AE', '#C5CAE9', '#B3E5FC', '#F8BBD0', '#DCEDC8', '#FFE0B2']
+
+    return {
+      segments: segments.map((segment, idx) => {
+        const base = palette[idx % palette.length]
+        return {
+          name: segment.name,
+          count: segment.count,
+          colors: {
+            from: adjustColor(base, 0.35),
+            to: adjustColor(base, -0.2),
+          },
+        }
+      }),
+      total,
+    }
+  }, [isLibrarySection, categoryContext])
+
+  const pieGradient = useMemo(() => {
+    if (categoryPieData.total === 0) return 'conic-gradient(from -90deg, #e5e7eb 0 100%)'
+    let start = 0
+    const parts: string[] = []
+    categoryPieData.segments.forEach((seg) => {
+      const pct = (seg.count / categoryPieData.total) * 100
+      const end = start + pct
+      parts.push(`${seg.colors.from} ${start}%`)
+      parts.push(`${seg.colors.to} ${end}%`)
+      start = end
+    })
+    return `conic-gradient(from -90deg, ${parts.join(',')})`
+  }, [categoryPieData])
+
+  const [hovered, setHovered] = useState<number | null>(null)
+  const [activeSegIdx, setActiveSegIdx] = useState<number | null>(null)
+
+  useEffect(() => {
+    setHovered(null)
+    setActiveSegIdx(null)
+  }, [section])
+
+  const updateSegmentByPointer = (clientX: number, clientY: number, pieEl: HTMLDivElement) => {
+    const rect = pieEl.getBoundingClientRect()
+    const cx = rect.left + rect.width / 2
+    const cy = rect.top + rect.height / 2
+    const dx = clientX - cx
+    const dy = clientY - cy
+    const angle = (Math.atan2(dy, dx) * 180) / Math.PI
+    let deg = angle < 0 ? angle + 360 : angle
+    deg = (deg + 90) % 360
+    let acc = 0
+    let found: number | null = null
+    categoryPieData.segments.forEach((seg, idx) => {
+      const pct = (seg.count / categoryPieData.total) * 100
+      const start = (acc / 100) * 360
+      const end = ((acc + pct) / 100) * 360
+      if (deg >= start && deg < end) {
+        found = idx
+      }
+      acc += pct
+    })
+    return found
+  }
+
+  const handlePieMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isLibrarySection) return
+    const pie = e.currentTarget
+    const found = updateSegmentByPointer(e.clientX, e.clientY, pie)
+    setHovered(found)
+  }
+
+  const handlePieClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isLibrarySection) return
+    const pie = e.currentTarget
+    const found = updateSegmentByPointer(e.clientX, e.clientY, pie)
+    setActiveSegIdx(found)
+  }
+
+  return (
+    <section className="panel list-panel">
+      <div className="stats-header">
+        <div className="stats-tabs">
+          <button className={`chip ${section === 'books' ? 'active' : ''}`} onClick={() => setSection('books')}>도서사전</button>
+          <button className={`chip ${section === 'movies' ? 'active' : ''}`} onClick={() => setSection('movies')}>영화·시리즈사전</button>
+          <button className={`chip ${section === 'encyclopedia' ? 'active' : ''}`} onClick={() => setSection('encyclopedia')}>전문사전</button>
+          <button className={`chip ${section === 'commons' ? 'active' : ''}`} onClick={() => setSection('commons')}>이론사전</button>
+        </div>
+      </div>
+
+      {isLibrarySection ? (
+        <div className="stats-sections">
+          <div className="stats-card">
+            <h3>{section === 'movies' ? '주제별 작품 수' : '주제별 권 수'}</h3>
+            {categoryPieData.segments.length === 0 ? (
+              <p className="hint small">데이터가 없습니다.</p>
+            ) : (
+              <div className="pie-chart" style={{ justifyContent: 'center' }}>
+                <div
+                  className="pie"
+                  style={{ background: pieGradient }}
+                  onMouseMove={handlePieMouseMove}
+                  onMouseLeave={() => setHovered(null)}
+                  onClick={handlePieClick}
+                  title={(activeSegIdx ?? hovered) != null ? `${categoryPieData.segments[(activeSegIdx ?? hovered)!].name} (${categoryPieData.segments[(activeSegIdx ?? hovered)!].count})` : '카테고리 분포'}
+                >
+                  {(activeSegIdx ?? hovered) != null && (
+                    <div className="pie-center-label">
+                      <div className="pie-center-name">{categoryPieData.segments[(activeSegIdx ?? hovered)!].name}</div>
+                      <div className="pie-center-count">{categoryPieData.segments[(activeSegIdx ?? hovered)!].count}</div>
+                    </div>
+                  )}
+                </div>
+                <ul className="legend">
+                  {categoryPieData.segments.map((seg, idx) => (
+                    <li key={seg.name} className="legend-item">
+                      <button
+                        className={`legend-swatch-btn ${(activeSegIdx ?? hovered) === idx ? 'active' : ''}`}
+                        style={{ backgroundImage: `linear-gradient(135deg, ${seg.colors.from}, ${seg.colors.to})` }}
+                        onClick={() => setActiveSegIdx(idx)}
+                        onMouseEnter={() => setHovered(idx)}
+                        onMouseLeave={() => setHovered(null)}
+                        type="button"
+                        title={`${seg.name} (${seg.count})`}
+                      />
+                      <span>{seg.name} ({seg.count})</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+
+          <div className="stats-card">
+            <h3>{section === 'movies' ? '년도별 작품 수' : '년도별 권 수'}</h3>
+            {yearStats.length === 0 ? (
+              <p className="hint small">데이터가 없습니다.</p>
+            ) : (
+              <div className="bar-chart">
+                <div className="bar-area">
+                  {(() => {
+                    const maxCount = Math.max(...yearStats.map((s) => s.count)) || 1
+                    const latestYear = Math.max(...yearStats.map((s) => s.year))
+                    return yearStats.map(({ year, count }) => {
+                      const percentage = Math.round((count / maxCount) * 100)
+                      const isLatest = year === latestYear
+                      const unit = section === 'movies' ? '편' : '권'
+                      return (
+                        <div key={year} className="bar-col" title={`${year}년 ${count}${unit}`}>
+                          <div className="bar-count">{count}</div>
+                          <div className={`bar ${isLatest ? 'latest' : ''}`} style={{ height: `${percentage}%` }} />
+                          <div className="bar-label">{year}</div>
+                        </div>
+                      )
+                    })
+                  })()}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="stats-sections">
+          <div className="stats-card">
+            <h3>클릭 수 상위 항목</h3>
+            <div className="stats-grid">
+              {clickRanking.length === 0 && <p className="hint small">아직 클릭 데이터가 없습니다. 항목을 열어 보면서 데이터가 쌓입니다.</p>}
+              {clickRanking.map((row, idx) => {
+                const max = clickRanking[0]?.count || 1
+                const pct = Math.round((row.count / max) * 100)
+                return (
+                  <div key={row.id} className="stat-item">
+                    <span className="stat-year">{idx + 1}. {row.title}</span>
+                    <div className="stat-bar-container">
+                      <div className="stat-bar" style={{ width: `${pct}%` }}>
+                        <span className="stat-count">{row.count}</span>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+    </section>
   )
 }
 

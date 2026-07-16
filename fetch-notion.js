@@ -170,6 +170,7 @@ function extractBookProperties(page) {
     year: getNumberValue(props.year || props.Year),
     state: getSelectValue(props.state || props.State),
     rating: getNumberValue(props.rating || props.star || props.Star),
+    mediaType: getSelectValue(props.type || props.Type || props.mediaType || props.MediaType),
     createdAt: page.created_time,
     updatedAt: page.last_edited_time,
   };
@@ -212,23 +213,24 @@ async function main() {
       console.log('  ⓘ 도서사전 ID가 설정되지 않았습니다.');
     }
 
-    // 상식사전 데이터 가져오기
-    let commons = [];
-    if (COMMONS_DATABASE_ID) {
-      console.log('  📗 상식사전 ID:', COMMONS_DATABASE_ID);
-      const commonsResponse = await fetchNotionDatabase(COMMONS_DATABASE_ID);
+    // 이론사전 데이터 가져오기
+      let commons = [];
+      if (COMMONS_DATABASE_ID) {
+        console.log('  📗 이론사전 ID:', COMMONS_DATABASE_ID);
+        const commonsResponse = await fetchNotionDatabase(COMMONS_DATABASE_ID);
 
-      if (commonsResponse.object === 'error') {
-        console.warn('⚠️  상식사전 API 오류 (무시함):', commonsResponse.message);
+        if (commonsResponse.object === 'error') {
+          console.warn('⚠️  이론사전 API 오류 (무시함):', commonsResponse.message);
+        } else {
+          commons = commonsResponse.results
+            .map(extractProperties)
+            .filter(common => common.title);
+          console.log(`  ✅ 이론사전: ${commons.length}개 항목`);
+        }
       } else {
-        commons = commonsResponse.results
-          .map(extractProperties)
-          .filter(common => common.title);
-        console.log(`  ✅ 상식사전: ${commons.length}개 항목`);
+        console.log('  ⓘ 이론사전 ID가 설정되지 않았습니다.');
       }
-    } else {
-      console.log('  ⓘ 상식사전 ID가 설정되지 않았습니다.');
-    }
+
 
     const data = {
       entries,
