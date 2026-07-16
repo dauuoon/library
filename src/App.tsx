@@ -104,25 +104,48 @@ const stripLeadingQuoteMarks = (text: string) =>
     .replace(/["“”']+$/, '')
     .trim()
 
+function extractFirstLineFromSummary(summary?: string): string {
+  if (!summary) return ''
+  const first = summary
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .find((line) => line.length > 0)
+  if (!first) return ''
+  return first
+    .replace(/^\s*✏️\s*/, '')
+    .replace(/\*\*/g, '')
+    .trim()
+}
+
 function pickRandomBookQuote(books: Book[]) {
-  if (!books.length) return null
-
-  const randomBook = books[Math.floor(Math.random() * books.length)]
-  if (!randomBook?.content) return null
-
-  const paragraphs = randomBook.content
-    .split('\n\n')
-    .map((paragraph) => paragraph.trim())
-    .map(stripLeadingQuoteMarks)
-    .filter((paragraph) => paragraph.startsWith('✏️'))
-
-  if (!paragraphs.length) return null
-
-  const randomParagraph = paragraphs[Math.floor(Math.random() * paragraphs.length)]
-  return {
-    book: randomBook.title,
-    paragraph: stripLeadingQuoteMarks(randomParagraph),
+  if (!books.length) {
+    return { book: '도서 데이터', paragraph: '표시할 명언이 없습니다.', rating: undefined as number | undefined }
   }
+
+  const withQuoteParagraph = books
+    .map((book) => {
+      const paragraphs = (book.content || '')
+        .split('\n\n')
+        .map((paragraph) => paragraph.trim())
+        .map(stripLeadingQuoteMarks)
+        .filter((paragraph) => paragraph.startsWith('✏️'))
+      if (!paragraphs.length) return null
+      const randomParagraph = paragraphs[Math.floor(Math.random() * paragraphs.length)]
+      return {
+        book: book.title,
+        paragraph: stripLeadingQuoteMarks(randomParagraph).replace(/^✏️\s*/, ''),
+        rating: book.rating,
+      }
+    })
+    .filter((v): v is { book: string; paragraph: string; rating: number | undefined } => Boolean(v))
+
+  if (withQuoteParagraph.length) {
+    return withQuoteParagraph[Math.floor(Math.random() * withQuoteParagraph.length)]
+  }
+
+  const fb = books[Math.floor(Math.random() * books.length)]
+  const fbLine = extractFirstLineFromSummary(fb.summary)
+  return { book: fb.title, paragraph: fbLine || '표시할 명언이 없습니다.', rating: fb.rating }
 }
 
 function App() {
@@ -174,7 +197,8 @@ function App() {
   const [showQuiz, setShowQuiz] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
   const [currentView, setCurrentView] = useState<'encyclopedia' | 'commons' | 'books' | 'movies' | 'stats'>('encyclopedia')
-  const [randomQuote, setRandomQuote] = useState<{ book: string; paragraph: string } | null>(null)
+  const [randomQuote, setRandomQuote] = useState<{ book: string; paragraph: string; rating?: number } | null>(null)
+  const [randomMovieQuote, setRandomMovieQuote] = useState<{ book: string; paragraph: string; rating?: number } | null>(null)
   const [clickCounts, setClickCounts] = useState<Record<string, number>>(() => {
     try {
       return JSON.parse(localStorage.getItem('clickCounts_v1') || '{}')
@@ -201,16 +225,23 @@ function App() {
   }, [toastMessage])
 
   useEffect(() => {
-    // 도서사전일 때 랜덤 문단 선택
-    if (currentView === 'books' && pureBooks.length > 0) {
+    // 도서/영화 사전 뷰에서 랜덤 문구 선택
+    if (currentView === 'books') {
       setRandomQuote(pickRandomBookQuote(pureBooks))
-    } else {
-      setRandomQuote(null)
     }
-  }, [currentView, pureBooks])
+    if (currentView === 'movies') {
+      setRandomMovieQuote(pickRandomBookQuote(moviesList))
+    }
+  }, [currentView, pureBooks, moviesList])
 
   const refreshRandomQuote = () => {
-    setRandomQuote(pickRandomBookQuote(pureBooks))
+    if (currentView === 'books') {
+      setRandomQuote(pickRandomBookQuote(pureBooks))
+      return
+    }
+    if (currentView === 'movies') {
+      setRandomMovieQuote(pickRandomBookQuote(moviesList))
+    }
   }
 
   const currentData = useMemo(() => {
@@ -392,7 +423,7 @@ function App() {
             ))}
           </div>
           {randomQuote && (
-            <div className="random-quote">
+            <div className="random-quote random-quote--book">
               <button
                 type="button"
                 className="quote-refresh-btn"
@@ -404,6 +435,9 @@ function App() {
               </button>
               <p className="quote-text">{randomQuote.paragraph}</p>
               <p className="quote-book">-{randomQuote.book}-</p>
+              {typeof randomQuote.rating === 'number' && (
+                <p className="quote-rating">평점 {randomQuote.rating.toFixed(1)}</p>
+              )}
             </div>
           )}
         </div>
@@ -419,6 +453,24 @@ function App() {
               </div>
             ))}
           </div>
+          {randomMovieQuote && (
+            <div className="random-quote random-quote--movie">
+              <button
+                type="button"
+                className="quote-refresh-btn"
+                onClick={refreshRandomQuote}
+                aria-label="영화 명언 새로고침"
+                title="영화 명언 새로고침"
+              >
+                <span className="material-symbols-outlined">refresh</span>
+              </button>
+              <p className="quote-text">{randomMovieQuote.paragraph}</p>
+              <p className="quote-book">-{randomMovieQuote.book}-</p>
+              {typeof randomMovieQuote.rating === 'number' && (
+                <p className="quote-rating">평점 {randomMovieQuote.rating.toFixed(1)}</p>
+              )}
+            </div>
+          )}
         </div>
       )}
 

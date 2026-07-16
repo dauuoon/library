@@ -1297,6 +1297,14 @@ button.ghost {
   letter-spacing: -0.2px;
 }
 
+.quote-rating {
+  margin: 0.5rem 0 0;
+  text-align: right;
+  color: #a99b7a;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
 /* 다크 모드 랜덤 인용 */
 .theme-dark .random-quote {
   background: linear-gradient(135deg, #2a2420 0%, #1f1c18 100%);
@@ -1326,4 +1334,67 @@ button.ghost {
 
 .theme-dark .quote-book {
   color: #b8a878;
+}
+
+.theme-dark .quote-rating {
+  color: #9f936f;
+}
+
+/* 영화 라벤더 톤 */
+.random-quote--movie {
+  background: linear-gradient(135deg, #3c3150 0%, #2f2542 100%);
+  box-shadow: 0 4px 12px rgba(37, 24, 61, 0.3),
+              inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.random-quote--movie .quote-refresh-btn {
+  border-color: rgba(190, 163, 255, 0.4);
+  background: rgba(24, 19, 36, 0.75);
+  color: #c8b2ff;
+}
+
+.random-quote--movie .quote-refresh-btn:hover {
+  background: rgba(176, 138, 255, 0.15);
+  border-color: rgba(190, 163, 255, 0.7);
+}
+
+.random-quote--movie::before {
+  background:
+    repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 2px,
+      rgba(190, 163, 255, 0.08) 2px,
+      rgba(190, 163, 255, 0.08) 4px
+    );
+}
+
+.random-quote--movie::after {
+  background: linear-gradient(90deg, transparent, rgba(190, 163, 255, 0.35), transparent);
+}
+
+.random-quote--movie .quote-text { color: #e7ddff; }
+.random-quote--movie .quote-book { color: #cdbff0; }
+.random-quote--movie .quote-rating { color: #b8a7df; }
+
+/* 도서 브라운 톤 */
+.random-quote--book {
+  background: linear-gradient(135deg, #3a2a25 0%, #271d19 100%);
+  box-shadow: 0 4px 12px rgba(58, 42, 37, 0.35),
+              inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.random-quote--book::before {
+  background:
+    repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 2px,
+      rgba(255, 184, 92, 0.06) 2px,
+      rgba(255, 184, 92, 0.06) 4px
+    );
+}
+
+.random-quote--book::after {
+  background: linear-gradient(90deg, transparent, rgba(255, 184, 92, 0.22), transparent);
 }
