@@ -9,6 +9,7 @@ dotenv.config({ path: '.env.local' });
 const NOTION_TOKEN = process.env.NOTION_TOKEN;
 const RAW_DATABASE_ID = process.env.NOTION_DATABASE_ID;
 const RAW_BOOKS_DATABASE_ID = process.env.NOTION_BOOKS_DATABASE_ID;
+const RAW_MOVIE_DATABASE_ID = process.env.NOTION_MOVIE_DATABASE_ID;
 const RAW_COMMONS_DATABASE_ID = process.env.NOTION_COMMONS_DATABASE_ID;
 
 const DATABASE_ID = RAW_DATABASE_ID && RAW_DATABASE_ID.includes('-')
@@ -21,6 +22,12 @@ const BOOKS_DATABASE_ID = RAW_BOOKS_DATABASE_ID && RAW_BOOKS_DATABASE_ID.include
   ? RAW_BOOKS_DATABASE_ID
   : RAW_BOOKS_DATABASE_ID
       ? `${RAW_BOOKS_DATABASE_ID.slice(0, 8)}-${RAW_BOOKS_DATABASE_ID.slice(8, 12)}-${RAW_BOOKS_DATABASE_ID.slice(12, 16)}-${RAW_BOOKS_DATABASE_ID.slice(16, 20)}-${RAW_BOOKS_DATABASE_ID.slice(20)}`
+      : '';
+
+const MOVIE_DATABASE_ID = RAW_MOVIE_DATABASE_ID && RAW_MOVIE_DATABASE_ID.includes('-')
+  ? RAW_MOVIE_DATABASE_ID
+  : RAW_MOVIE_DATABASE_ID
+      ? `${RAW_MOVIE_DATABASE_ID.slice(0, 8)}-${RAW_MOVIE_DATABASE_ID.slice(8, 12)}-${RAW_MOVIE_DATABASE_ID.slice(12, 16)}-${RAW_MOVIE_DATABASE_ID.slice(16, 20)}-${RAW_MOVIE_DATABASE_ID.slice(20)}`
       : '';
 
 const COMMONS_DATABASE_ID = RAW_COMMONS_DATABASE_ID && RAW_COMMONS_DATABASE_ID.includes('-')
@@ -176,6 +183,15 @@ function extractBookProperties(page) {
   };
 }
 
+function extractMovieProperties(page) {
+  const book = extractBookProperties(page);
+
+  return {
+    ...book,
+    mediaType: book.mediaType || '영화·시리즈',
+  };
+}
+
 async function main() {
   try {
     console.log('📚 노션 데이터베이스에서 데이터 가져오는 중...');
@@ -211,6 +227,23 @@ async function main() {
       }
     } else {
       console.log('  ⓘ 도서사전 ID가 설정되지 않았습니다.');
+    }
+
+    if (MOVIE_DATABASE_ID) {
+      console.log('  🎬 영화·시리즈사전 ID:', MOVIE_DATABASE_ID);
+      const moviesResponse = await fetchNotionDatabase(MOVIE_DATABASE_ID);
+
+      if (moviesResponse.object === 'error') {
+        console.warn('⚠️  영화·시리즈사전 API 오류 (무시함):', moviesResponse.message);
+      } else {
+        const movies = moviesResponse.results
+          .map(extractMovieProperties)
+          .filter(movie => movie.title);
+        books = books.concat(movies);
+        console.log(`  ✅ 영화·시리즈사전: ${movies.length}개 항목`);
+      }
+    } else {
+      console.log('  ⓘ 영화·시리즈사전 ID가 설정되지 않았습니다.');
     }
 
     // 이론사전 데이터 가져오기

@@ -1209,6 +1209,32 @@ button.ghost {
   overflow: hidden;
 }
 
+.quote-refresh-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(227, 173, 77, 0.3);
+  border-radius: 999px;
+  background: rgba(17, 17, 17, 0.7);
+  color: #e1ad4d;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 2;
+}
+
+.quote-refresh-btn:hover {
+  background: rgba(227, 173, 77, 0.12);
+  border-color: rgba(227, 173, 77, 0.55);
+}
+
+.quote-refresh-btn .material-symbols-outlined {
+  font-size: 18px;
+}
+
 .random-quote::before {
   content: '';
   position: absolute;

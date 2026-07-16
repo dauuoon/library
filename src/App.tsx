@@ -104,6 +104,27 @@ const stripLeadingQuoteMarks = (text: string) =>
     .replace(/["“”']+$/, '')
     .trim()
 
+function pickRandomBookQuote(books: Book[]) {
+  if (!books.length) return null
+
+  const randomBook = books[Math.floor(Math.random() * books.length)]
+  if (!randomBook?.content) return null
+
+  const paragraphs = randomBook.content
+    .split('\n\n')
+    .map((paragraph) => paragraph.trim())
+    .map(stripLeadingQuoteMarks)
+    .filter((paragraph) => paragraph.startsWith('✏️'))
+
+  if (!paragraphs.length) return null
+
+  const randomParagraph = paragraphs[Math.floor(Math.random() * paragraphs.length)]
+  return {
+    book: randomBook.title,
+    paragraph: stripLeadingQuoteMarks(randomParagraph),
+  }
+}
+
 function App() {
   const [entries] = useState<Entry[]>(() => {
     const fileEntries = (notionData as NotionData).entries ?? []
@@ -182,24 +203,15 @@ function App() {
   useEffect(() => {
     // 도서사전일 때 랜덤 문단 선택
     if (currentView === 'books' && pureBooks.length > 0) {
-      const randomBook = pureBooks[Math.floor(Math.random() * pureBooks.length)]
-      if (randomBook?.content) {
-        const paragraphs = randomBook.content
-          .split('\n\n')
-          .map(p => p.trim())
-          .map(stripLeadingQuoteMarks)
-          .filter(p => p.startsWith('✏️'))
-        if (paragraphs.length > 0) {
-          const randomParagraph = paragraphs[Math.floor(Math.random() * paragraphs.length)]
-          setRandomQuote({ book: randomBook.title, paragraph: stripLeadingQuoteMarks(randomParagraph) })
-          return
-        }
-      }
-      setRandomQuote(null)
+      setRandomQuote(pickRandomBookQuote(pureBooks))
     } else {
       setRandomQuote(null)
     }
   }, [currentView, pureBooks])
+
+  const refreshRandomQuote = () => {
+    setRandomQuote(pickRandomBookQuote(pureBooks))
+  }
 
   const currentData = useMemo(() => {
     if (currentView === 'commons') return commons
@@ -381,6 +393,15 @@ function App() {
           </div>
           {randomQuote && (
             <div className="random-quote">
+              <button
+                type="button"
+                className="quote-refresh-btn"
+                onClick={refreshRandomQuote}
+                aria-label="명언 새로고침"
+                title="명언 새로고침"
+              >
+                <span className="material-symbols-outlined">refresh</span>
+              </button>
               <p className="quote-text">{randomQuote.paragraph}</p>
               <p className="quote-book">-{randomQuote.book}-</p>
             </div>
